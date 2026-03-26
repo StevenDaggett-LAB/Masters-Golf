@@ -3,12 +3,35 @@ import { env } from '@/lib/env';
 
 const cookieName = 'admin_token';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   if (!env.adminAccessToken) {
     return NextResponse.json(
       { error: 'ADMIN_ACCESS_TOKEN is not configured on the server.' },
       { status: 500 },
     );
+  }
+
+  if (!env.adminAccessPassword) {
+    return NextResponse.json(
+      { error: 'ADMIN_ACCESS_PASSWORD is not configured on the server.' },
+      { status: 500 },
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Admin password is required.' }, { status: 400 });
+  }
+
+  const password =
+    typeof body === 'object' && body !== null && 'password' in body
+      ? (body as { password?: unknown }).password
+      : undefined;
+
+  if (typeof password !== 'string' || password !== env.adminAccessPassword) {
+    return NextResponse.json({ error: 'Invalid admin password.' }, { status: 401 });
   }
 
   const response = NextResponse.json({ success: true });
@@ -46,4 +69,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ hasAccess: token === env.adminAccessToken });
 }
-

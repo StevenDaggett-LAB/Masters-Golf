@@ -39,6 +39,7 @@ Private golf pool starter app built with the Next.js App Router and a Supabase b
    ```
 
 3. Fill in `.env.local` with your Supabase project values.
+   - Set both `ADMIN_ACCESS_TOKEN` and `ADMIN_ACCESS_PASSWORD` for admin mode.
 
 4. Apply database schema:
 
