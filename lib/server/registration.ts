@@ -29,12 +29,10 @@ export async function registerApprovedUser(payload: RegistrationPayload): Promis
   const normalizedName = normalizeFullName(fullName);
   const supabase = createSupabaseAdminClient();
 
-  // Case-insensitive approved list check.
-  const { data: approvedUser, error: approvedError } = await supabase
+  // Load approved users and perform normalized case-insensitive matching in app code.
+  const { data: approvedUsers, error: approvedError } = await supabase
     .from('approved_users')
-    .select('id, full_name')
-    .ilike('full_name', normalizedName)
-    .maybeSingle();
+    .select('id, full_name');
 
   if (approvedError) {
     return {
@@ -43,6 +41,10 @@ export async function registerApprovedUser(payload: RegistrationPayload): Promis
       message: `Failed to validate approved user: ${approvedError.message}`,
     };
   }
+
+  const approvedUser = (approvedUsers ?? []).find(
+    (candidate) => normalizeFullName(candidate.full_name) === normalizedName,
+  );
 
   if (!approvedUser) {
     return {
