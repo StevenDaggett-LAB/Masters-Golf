@@ -15,7 +15,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       tiers?: Array<{ tierNumber?: number; golferName?: string; odds?: string }>;
+      replaceAll?: boolean;
+      confirmReplace?: boolean;
     };
+
+    if (body.replaceAll && !body.confirmReplace) {
+      return NextResponse.json(
+        { error: 'Replace-all action requires explicit confirmation.' },
+        { status: 400 },
+      );
+    }
 
     const tiers = (body.tiers ?? []).map((tier) => ({
       tierNumber: tier.tierNumber ?? 0,

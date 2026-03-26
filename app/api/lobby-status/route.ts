@@ -1,24 +1,24 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseAdminClient } from '@/lib/supabase';
+import { getDraftStatus } from '@/lib/server/draft';
 
 export async function GET() {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from('settings')
-    .select('draft_locked, draft_open, lock_time')
-    .eq('id', 1)
-    .single();
+  try {
+    const status = await getDraftStatus();
 
-  if (error) {
+    return NextResponse.json({
+      draftLocked: status.effectiveLocked,
+      draftOpen: status.draftOpen,
+      lockTime: status.lockTime,
+      status: status.status,
+      deadlinePassed: status.deadlinePassed,
+      hardLockTimeUtc: status.hardLockTimeUtc,
+    });
+  } catch (error) {
     return NextResponse.json(
-      { error: `Failed to load lobby status: ${error.message}` },
+      {
+        error: error instanceof Error ? `Failed to load lobby status: ${error.message}` : 'Failed to load lobby status.',
+      },
       { status: 500 },
     );
   }
-
-  return NextResponse.json({
-    draftLocked: data.draft_locked,
-    draftOpen: data.draft_open,
-    lockTime: data.lock_time,
-  });
 }
