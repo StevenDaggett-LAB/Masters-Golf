@@ -33,8 +33,6 @@ create table if not exists public.teams (
   is_locked boolean not null default false
 );
 
-create unique index if not exists teams_user_id_unique_idx on public.teams(user_id);
-
 create table if not exists public.tiers (
   id uuid primary key default gen_random_uuid(),
   tier_number int not null check (tier_number between 1 and 6),

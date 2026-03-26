@@ -45,8 +45,9 @@ Private golf pool starter app built with the Next.js App Router and a Supabase b
 
 4. Apply database schema:
 
-   - Option A: Paste `supabase/migrations/0001_initial_schema.sql` into Supabase SQL Editor and run it.
-   - Option B: If you use the Supabase CLI locally, add this migration and run your normal migration flow.
+   - Run base migration: `supabase/migrations/0001_initial_schema.sql`
+   - Then run Phase 3 migration: `supabase/migrations/0002_phase3_teams_unique_index.sql`
+   - If you use Supabase CLI, run your normal migration flow so both files are applied in order.
 
 5. Seed approved users and tiers (for local testing):
 
