@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NavLinks } from '@/components/nav-links';
+import { AdminAccessButton } from '@/components/admin-access-button';
 
 export default function LandingPage() {
   return (
@@ -13,6 +14,9 @@ export default function LandingPage() {
         <Link className="button" href="/join">
           Enter
         </Link>
+        <div className="nav-row">
+          <AdminAccessButton mode="enter" />
+        </div>
         <NavLinks />
       </section>
     </main>
