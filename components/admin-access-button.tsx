@@ -26,7 +26,14 @@ export function AdminAccessButton({ mode }: AdminAccessButtonProps) {
         throw new Error(data.error ?? 'Unable to update admin access.');
       }
 
-      router.push(mode === 'enter' ? '/admin' : '/');
+      if (mode === 'enter') {
+        // Use a full navigation after cookie mutation so middleware always
+        // evaluates /admin with the new cookie value.
+        window.location.assign('/admin');
+        return;
+      }
+
+      router.push('/');
       router.refresh();
     } catch (accessError) {
       setError(accessError instanceof Error ? accessError.message : 'Unable to update admin access.');
