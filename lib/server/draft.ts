@@ -137,6 +137,20 @@ export async function isDraftLocked() {
   return status.effectiveLocked;
 }
 
+export async function setDraftAdminState(nextState: 'open' | 'locked') {
+  const supabase = createSupabaseAdminClient();
+  const updatePayload =
+    nextState === 'open'
+      ? { draft_open: true, draft_locked: false }
+      : { draft_open: false, draft_locked: true, lock_time: new Date().toISOString() };
+
+  const { error } = await supabase.from('settings').update(updatePayload).eq('id', 1);
+
+  if (error) {
+    throw new Error(`Failed to update draft settings: ${error.message}`);
+  }
+}
+
 export async function hasExactDuplicateTeam(team: TeamPicks, excludeUserId: string) {
   const supabase = createSupabaseAdminClient();
   const { count, error } = await supabase

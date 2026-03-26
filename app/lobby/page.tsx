@@ -82,7 +82,7 @@ export default function LobbyPage() {
 
         {status && !status.draftLocked ? (
           <>
-            <p className="success">Draft is open.</p>
+            <p className="success">Draft status: <code>open</code>. Draft is editable.</p>
             <Link className="button" href="/draft">
               Go to Draft
             </Link>
@@ -91,7 +91,11 @@ export default function LobbyPage() {
 
         {status && status.draftLocked ? (
           <>
-            <p>Draft is currently locked. Teams are read-only.</p>
+            {status.status === 'locked_by_admin' ? (
+              <p>Draft status: <code>locked_by_admin</code>. Teams are read-only.</p>
+            ) : (
+              <p>Draft status: <code>locked_by_deadline</code>. Teams are read-only.</p>
+            )}
             <p>
               Countdown to lock time (<code>{TARGET_LOCK_TIME_PACIFIC}</code>):
             </p>
