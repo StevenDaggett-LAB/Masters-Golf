@@ -13,12 +13,26 @@ export function AdminAccessButton({ mode }: AdminAccessButtonProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function onClick() {
+    let adminPassword: string | undefined;
+    if (mode === 'enter') {
+      const enteredPassword = window.prompt('Enter admin password or PIN');
+      if (enteredPassword === null) {
+        return;
+      }
+
+      adminPassword = enteredPassword;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const response = await fetch('/api/admin/access', {
         method: mode === 'enter' ? 'POST' : 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: mode === 'enter' ? JSON.stringify({ password: adminPassword }) : undefined,
       });
 
       const data = (await response.json()) as { error?: string };
