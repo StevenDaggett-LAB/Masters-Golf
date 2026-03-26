@@ -1,8 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NavLinks } from '@/components/nav-links';
+import { getStoredUserId, storeUserId } from '@/lib/session';
 
 type JoinResult = {
   success?: boolean;
@@ -14,10 +15,19 @@ type JoinResult = {
 export default function JoinPage() {
   const [fullName, setFullName] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const existingUserId = getStoredUserId();
+    if (existingUserId) {
+      router.replace('/lobby');
+    }
+  }, [router]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,16 +39,21 @@ export default function JoinPage() {
       const response = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, teamName }),
+        body: JSON.stringify({ fullName, teamName, phone, email }),
       });
       const data = (await response.json()) as JoinResult;
 
-      if (!response.ok || !data.success) {
+      if (!response.ok || !data.success || !data.userId) {
         setError(data.error ?? 'Unable to join right now.');
         return;
       }
 
-      setMessage(data.existing ? 'Welcome back! Redirecting to lobby…' : 'You are in! Redirecting…');
+      storeUserId(data.userId);
+      setMessage(
+        data.existing
+          ? 'Welcome back! Redirecting to lobby…'
+          : 'Registration successful. Redirecting to lobby…',
+      );
       router.push('/lobby');
     } catch {
       setError('Network error. Please try again.');
@@ -54,7 +69,7 @@ export default function JoinPage() {
         <p>Only approved members can register.</p>
 
         <form onSubmit={onSubmit}>
-          <label htmlFor="fullName">Full name</label>
+          <label htmlFor="fullName">Full Name *</label>
           <input
             id="fullName"
             autoComplete="name"
@@ -63,7 +78,7 @@ export default function JoinPage() {
             required
           />
 
-          <label htmlFor="teamName">Team name</label>
+          <label htmlFor="teamName">Team Name *</label>
           <input
             id="teamName"
             value={teamName}
@@ -71,9 +86,26 @@ export default function JoinPage() {
             required
           />
 
+          <label htmlFor="phone">Phone (optional)</label>
+          <input
+            id="phone"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+          />
+
+          <label htmlFor="email">Email (optional)</label>
+          <input
+            id="email"
+            autoComplete="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+
           <div className="nav-row">
             <button className="button" type="submit" disabled={loading}>
-              {loading ? 'Checking…' : 'Join'}
+              {loading ? 'Joining…' : 'Join Pool'}
             </button>
           </div>
         </form>

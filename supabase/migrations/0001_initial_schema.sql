@@ -1,16 +1,6 @@
 -- Enable required extension for UUID generation
 create extension if not exists pgcrypto;
 
-create table if not exists public.users (
-  id uuid primary key default gen_random_uuid(),
-  full_name text not null,
-  team_name text not null,
-  phone text,
-  email text unique,
-  pin_hash text,
-  created_at timestamptz not null default now()
-);
-
 create table if not exists public.approved_users (
   id uuid primary key default gen_random_uuid(),
   full_name text not null
@@ -18,6 +8,17 @@ create table if not exists public.approved_users (
 
 create unique index if not exists approved_users_full_name_lower_idx
   on public.approved_users ((lower(full_name)));
+
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  approved_user_id uuid unique references public.approved_users(id),
+  full_name text not null,
+  team_name text not null,
+  phone text,
+  email text,
+  pin_hash text,
+  created_at timestamptz not null default now()
+);
 
 create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),

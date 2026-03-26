@@ -15,6 +15,7 @@ Private golf pool starter app built with the Next.js App Router and a Supabase b
   - `tiers`
   - `settings`
   - `scores`
+- Manual approved-user seed script (`supabase/seeds/approved_users.sql`)
 - Working navigation:
   - Landing page (`/`)
   - Join page (`/join`)
@@ -44,11 +45,13 @@ Private golf pool starter app built with the Next.js App Router and a Supabase b
    - Option A: Paste `supabase/migrations/0001_initial_schema.sql` into Supabase SQL Editor and run it.
    - Option B: If you use the Supabase CLI locally, add this migration and run your normal migration flow.
 
-5. Add approved players to `approved_users` table (example):
+5. Seed approved users manually (required for join validation):
 
    ```sql
+   -- run supabase/seeds/approved_users.sql
    insert into public.approved_users (full_name)
-   values ('Tiger Woods'), ('Rory McIlroy');
+   values ('Tiger Woods'), ('Rory McIlroy')
+   on conflict do nothing;
    ```
 
 6. Run the app:
@@ -57,9 +60,18 @@ Private golf pool starter app built with the Next.js App Router and a Supabase b
    npm run dev
    ```
 
-## Registration flow notes
+## Registration + lobby flow
 
-- `/join` submits to `POST /api/join`.
-- Full names are normalized with case-insensitive matching before checking `approved_users`.
-- A UUID is generated in PostgreSQL for each user record.
-- Admin route protection is currently a placeholder middleware check for an `admin_token` cookie.
+- `/join` submits to `POST /api/join` and requires:
+  - Full Name (required)
+  - Team Name (required)
+  - Phone (optional)
+  - Email (optional)
+- Names are normalized and validated against `approved_users` using a case-insensitive check.
+- If the name is not approved, registration is blocked with:
+  - `You are not on the approved list. Please contact the admin.`
+- Duplicate registrations are prevented by unique `approved_user_id` linkage in `users`.
+- On success, `userId` is stored in localStorage and the user is redirected to `/lobby`.
+- Returning users with a stored `userId` skip the join form.
+- `/lobby` fetches `settings` and, when `draft_locked = true`, shows a countdown to:
+  - April 8, 2026 at 8:00 PM America/Los_Angeles
