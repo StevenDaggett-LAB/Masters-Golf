@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const locked = await isDraftLocked();
     if (locked) {
       return NextResponse.json(
-        { error: 'Draft is locked. Teams are read-only now.' },
+        { error: 'Draft is locked. Team edits closed on April 8, 2026 at 8:00 PM Pacific.' },
         { status: 403 },
       );
     }

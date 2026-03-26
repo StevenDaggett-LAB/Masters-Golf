@@ -10,6 +10,7 @@ type LobbyStatus = {
   draftLocked: boolean;
   draftOpen: boolean;
   lockTime: string | null;
+  status?: 'open' | 'locked_by_admin' | 'locked_by_deadline';
   error?: string;
 };
 
@@ -79,7 +80,7 @@ export default function LobbyPage() {
 
         {status?.error && <p className="error">{status.error}</p>}
 
-        {status && status.draftOpen ? (
+        {status && !status.draftLocked ? (
           <>
             <p className="success">Draft is open.</p>
             <Link className="button" href="/draft">
@@ -88,9 +89,9 @@ export default function LobbyPage() {
           </>
         ) : null}
 
-        {status && !status.draftOpen ? (
+        {status && status.draftLocked ? (
           <>
-            <p>Draft is currently locked. Teams are read-only until the next open window.</p>
+            <p>Draft is currently locked. Teams are read-only.</p>
             <p>
               Countdown to lock time (<code>{TARGET_LOCK_TIME_PACIFIC}</code>):
             </p>

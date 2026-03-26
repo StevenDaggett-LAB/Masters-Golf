@@ -16,7 +16,10 @@ export type TeamPicks = {
   tier6: string;
 };
 
+export type DraftStatus = 'open' | 'locked_by_admin' | 'locked_by_deadline';
+
 const tierNumbers = [1, 2, 3, 4, 5, 6] as const;
+export const HARD_DRAFT_LOCK_UTC = '2026-04-09T03:00:00.000Z';
 
 export function normalizeTeamPicks(input: Partial<TeamPicks>): TeamPicks {
   return {
@@ -97,11 +100,11 @@ export async function loadUserTeam(userId: string) {
   return data;
 }
 
-export async function isDraftLocked() {
+export async function getDraftStatus() {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from('settings')
-    .select('draft_open, draft_locked')
+    .select('draft_open, draft_locked, lock_time')
     .eq('id', 1)
     .single();
 
@@ -109,7 +112,29 @@ export async function isDraftLocked() {
     throw new Error(`Failed to load draft settings: ${error.message}`);
   }
 
-  return data.draft_locked || !data.draft_open;
+  const deadlinePassed = Date.now() >= Date.parse(HARD_DRAFT_LOCK_UTC);
+
+  let status: DraftStatus = 'open';
+  if (deadlinePassed) {
+    status = 'locked_by_deadline';
+  } else if (data.draft_locked || !data.draft_open) {
+    status = 'locked_by_admin';
+  }
+
+  return {
+    status,
+    effectiveLocked: status !== 'open',
+    deadlinePassed,
+    hardLockTimeUtc: HARD_DRAFT_LOCK_UTC,
+    draftOpen: data.draft_open,
+    draftLocked: data.draft_locked,
+    lockTime: data.lock_time,
+  };
+}
+
+export async function isDraftLocked() {
+  const status = await getDraftStatus();
+  return status.effectiveLocked;
 }
 
 export async function hasExactDuplicateTeam(team: TeamPicks, excludeUserId: string) {
