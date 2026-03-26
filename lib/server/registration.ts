@@ -29,11 +29,11 @@ export async function registerApprovedUser(payload: RegistrationPayload): Promis
   const normalizedName = normalizeFullName(fullName);
   const supabase = createSupabaseAdminClient();
 
-  // Case-insensitive approved list check.
+  // Normalize user input and match it against lower(full_name) in Supabase.
   const { data: approvedUser, error: approvedError } = await supabase
     .from('approved_users')
     .select('id, full_name')
-    .ilike('full_name', normalizedName)
+    .filter('lower(full_name)', 'eq', normalizedName)
     .maybeSingle();
 
   if (approvedError) {
