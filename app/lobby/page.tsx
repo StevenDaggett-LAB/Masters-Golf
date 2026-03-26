@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NavLinks } from '@/components/nav-links';
 import { getStoredUserId } from '@/lib/session';
@@ -79,18 +78,9 @@ export default function LobbyPage() {
 
         {status?.error && <p className="error">{status.error}</p>}
 
-        {status && status.draftOpen ? (
+        {status && status.draftLocked ? (
           <>
-            <p className="success">Draft is open.</p>
-            <Link className="button" href="/draft">
-              Go to Draft
-            </Link>
-          </>
-        ) : null}
-
-        {status && !status.draftOpen ? (
-          <>
-            <p>Draft is currently locked. Teams are read-only until the next open window.</p>
+            <p>Draft is not open yet.</p>
             <p>
               Countdown to lock time (<code>{TARGET_LOCK_TIME_PACIFIC}</code>):
             </p>
@@ -98,6 +88,10 @@ export default function LobbyPage() {
               <strong>{countdown}</strong>
             </p>
           </>
+        ) : null}
+
+        {status && !status.draftLocked ? (
+          <p className="success">Draft is currently open. Drafting UI will be added next.</p>
         ) : null}
 
         <NavLinks />

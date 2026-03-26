@@ -4,7 +4,6 @@ const links = [
   { href: '/', label: 'Landing' },
   { href: '/join', label: 'Join' },
   { href: '/lobby', label: 'Lobby' },
-  { href: '/draft', label: 'Draft' },
   { href: '/admin', label: 'Admin' },
 ];
 
