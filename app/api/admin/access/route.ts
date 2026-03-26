@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 
 const cookieName = 'admin_token';
@@ -35,3 +35,15 @@ export async function DELETE() {
 
   return response;
 }
+
+
+export async function GET(request: NextRequest) {
+  if (!env.adminAccessToken) {
+    return NextResponse.json({ hasAccess: false });
+  }
+
+  const token = request.cookies.get(cookieName)?.value;
+
+  return NextResponse.json({ hasAccess: token === env.adminAccessToken });
+}
+
