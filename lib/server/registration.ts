@@ -29,12 +29,10 @@ export async function registerApprovedUser(payload: RegistrationPayload): Promis
   const normalizedName = normalizeFullName(fullName);
   const supabase = createSupabaseAdminClient();
 
-  // Normalize user input and match it against lower(full_name) in Supabase.
-  const { data: approvedUser, error: approvedError } = await supabase
+  // Fetch approved users and compare normalized names in application code.
+  const { data: approvedUsers, error: approvedError } = await supabase
     .from('approved_users')
-    .select('id, full_name')
-    .filter('lower(full_name)', 'eq', normalizedName)
-    .maybeSingle();
+    .select('id, full_name');
 
   if (approvedError) {
     return {
@@ -43,6 +41,8 @@ export async function registerApprovedUser(payload: RegistrationPayload): Promis
       message: `Failed to validate approved user: ${approvedError.message}`,
     };
   }
+
+  const approvedUser = approvedUsers?.find((user) => normalizeFullName(user.full_name) === normalizedName) ?? null;
 
   if (!approvedUser) {
     return {
