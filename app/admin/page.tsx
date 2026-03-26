@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { NavLinks } from '@/components/nav-links';
+import { AdminAccessButton } from '@/components/admin-access-button';
 
 type TierRow = {
   localId: string;
@@ -320,6 +321,9 @@ export default function AdminPage() {
       <section className="card">
         <h2>Admin Tier Management</h2>
         <p>Create and edit golfers in each of the 6 tiers.</p>
+        <div className="nav-row">
+          <AdminAccessButton mode="exit" />
+        </div>
 
         {status ? (
           <div className="tier-panel">

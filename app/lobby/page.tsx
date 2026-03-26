@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NavLinks } from '@/components/nav-links';
 import { getStoredUserId } from '@/lib/session';
+import { AdminAccessButton } from '@/components/admin-access-button';
 
 type LobbyStatus = {
   draftLocked: boolean;
@@ -104,6 +105,11 @@ export default function LobbyPage() {
             </p>
           </>
         ) : null}
+
+
+        <div className="nav-row">
+          <AdminAccessButton mode="enter" />
+        </div>
 
         <NavLinks />
       </section>
