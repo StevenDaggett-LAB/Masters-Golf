@@ -24,6 +24,8 @@ type LobbyStatus = {
   draftOpen: boolean;
   lockTime: string | null;
   status: DraftStatus;
+  deadlinePassed?: boolean;
+  hardLockTimeUtc?: string;
 };
 
 const tierNumbers = [1, 2, 3, 4, 5, 6] as const;
@@ -131,6 +133,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [updatingDraftState, setUpdatingDraftState] = useState(false);
   const [importText, setImportText] = useState('');
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -278,12 +281,39 @@ export default function AdminPage() {
     }
   }
 
+  async function updateDraftState(action: 'open' | 'lock') {
+    setUpdatingDraftState(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/admin/draft-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      const data = (await response.json()) as LobbyStatus & { success?: boolean; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to update draft status.');
+      }
+
+      setStatus(data);
+      setSuccess(action === 'open' ? 'Draft open action saved.' : 'Draft lock action saved.');
+    } catch (draftStateError) {
+      setError(draftStateError instanceof Error ? draftStateError.message : 'Failed to update draft status.');
+    } finally {
+      setUpdatingDraftState(false);
+    }
+  }
+
   const statusLabel =
     status?.status === 'open'
-      ? 'Draft open'
+      ? 'open'
       : status?.status === 'locked_by_deadline'
-        ? 'Draft locked by deadline'
-        : 'Draft locked by admin';
+        ? 'locked_by_deadline'
+        : 'locked_by_admin';
+  const editableLabel = status?.status === 'open' ? 'Yes' : 'No';
 
   return (
     <main>
@@ -291,7 +321,38 @@ export default function AdminPage() {
         <h2>Admin Tier Management</h2>
         <p>Create and edit golfers in each of the 6 tiers.</p>
 
-        {status ? <p><strong>Draft status:</strong> {statusLabel}</p> : null}
+        {status ? (
+          <div className="tier-panel">
+            <h3>Draft Status</h3>
+            <p>
+              <strong>Current effective status:</strong> <code>{statusLabel}</code>
+            </p>
+            <p>
+              <strong>Draft editable right now:</strong> {editableLabel}
+            </p>
+            <p>
+              <strong>Hard deadline:</strong> April 8, 2026 at 8:00 PM America/Los_Angeles
+            </p>
+            <div className="nav-row">
+              <button
+                type="button"
+                className="button button-small"
+                onClick={() => updateDraftState('open')}
+                disabled={updatingDraftState}
+              >
+                {updatingDraftState ? 'Updating…' : 'Open Draft'}
+              </button>
+              <button
+                type="button"
+                className="button button-small"
+                onClick={() => updateDraftState('lock')}
+                disabled={updatingDraftState}
+              >
+                {updatingDraftState ? 'Updating…' : 'Lock Draft'}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {loading ? <p>Loading tiers…</p> : null}
         {error ? <p className="error">{error}</p> : null}
