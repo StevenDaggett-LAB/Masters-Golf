@@ -40,6 +40,11 @@ type LobbyStatus = {
   hardLockTimeUtc?: string;
 };
 
+type ApprovedUser = {
+  id: string;
+  fullName: string;
+};
+
 const tierNumbers = [1, 2, 3, 4, 5, 6] as const;
 
 function makeBlankRow(tierNumber: number): TierRow {
@@ -251,18 +256,27 @@ export default function AdminPage() {
   const [scoreImportText, setScoreImportText] = useState('');
   const [importingScores, setImportingScores] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
+  const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [approvedImportText, setApprovedImportText] = useState('');
+  const [addingApprovedUser, setAddingApprovedUser] = useState(false);
+  const [importingApprovedUsers, setImportingApprovedUsers] = useState(false);
+  const [removingApprovedUserId, setRemovingApprovedUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   async function loadTiersAndStatus() {
     setLoading(true);
-    const [tiersResponse, statusResponse] = await Promise.all([
+    const [tiersResponse, statusResponse, approvedUsersResponse] = await Promise.all([
       fetch('/api/tiers', { cache: 'no-store' }),
       fetch('/api/lobby-status', { cache: 'no-store' }),
+      fetch('/api/admin/approved-users', { cache: 'no-store' }),
     ]);
 
     const data = (await tiersResponse.json()) as { tiers?: TierGolfer[]; error?: string };
     const statusData = (await statusResponse.json()) as LobbyStatus & { error?: string };
+    const approvedUsersData = (await approvedUsersResponse.json()) as { users?: ApprovedUser[]; error?: string };
 
     if (!tiersResponse.ok || !data.tiers) {
       setError(data.error ?? 'Failed to load tiers.');
@@ -273,6 +287,9 @@ export default function AdminPage() {
 
     if (statusResponse.ok) {
       setStatus(statusData);
+    }
+    if (approvedUsersResponse.ok) {
+      setApprovedUsers(approvedUsersData.users ?? []);
     }
 
     const nextRows = data.tiers.map((tier) => ({
@@ -290,6 +307,106 @@ export default function AdminPage() {
 
     setRows(nextRows.sort((a, b) => a.tierNumber - b.tierNumber));
     setLoading(false);
+  }
+
+  function parseApprovedUserLines(input: string) {
+    return input
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.replace(/\s+/g, ' '));
+  }
+
+  async function onAddApprovedUser() {
+    setAddingApprovedUser(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/admin/approved-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName }),
+      });
+
+      const data = (await response.json()) as { success?: boolean; user?: ApprovedUser; error?: string };
+      if (!response.ok || !data.success || !data.user) {
+        throw new Error(data.error ?? 'Failed to add approved user.');
+      }
+
+      setApprovedUsers((previous) => [...previous, data.user].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+      setFirstName('');
+      setLastName('');
+      setSuccess(`Added ${data.user.fullName} to approved users.`);
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : 'Failed to add approved user.');
+    } finally {
+      setAddingApprovedUser(false);
+    }
+  }
+
+  async function onRemoveApprovedUser(id: string, fullName: string) {
+    setRemovingApprovedUserId(id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/admin/approved-users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = (await response.json()) as { success?: boolean; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to remove approved user.');
+      }
+
+      setApprovedUsers((previous) => previous.filter((user) => user.id !== id));
+      setSuccess(`Removed ${fullName} from approved users.`);
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : 'Failed to remove approved user.');
+    } finally {
+      setRemovingApprovedUserId(null);
+    }
+  }
+
+  async function onImportApprovedUsers() {
+    setImportingApprovedUsers(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const names = parseApprovedUserLines(approvedImportText);
+      if (names.length === 0) {
+        throw new Error('No approved users found in import text.');
+      }
+
+      const response = await fetch('/api/admin/approved-users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names }),
+      });
+
+      const data = (await response.json()) as { success?: boolean; count?: number; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to import approved users.');
+      }
+
+      const refreshResponse = await fetch('/api/admin/approved-users', { cache: 'no-store' });
+      const refreshData = (await refreshResponse.json()) as { users?: ApprovedUser[]; error?: string };
+      if (!refreshResponse.ok) {
+        throw new Error(refreshData.error ?? 'Approved users were imported but refresh failed.');
+      }
+
+      setApprovedUsers(refreshData.users ?? []);
+      setApprovedImportText('');
+      setSuccess(`Imported ${data.count ?? names.length} approved users.`);
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'Failed to import approved users.');
+    } finally {
+      setImportingApprovedUsers(false);
+    }
   }
 
   useEffect(() => {
@@ -520,6 +637,63 @@ export default function AdminPage() {
 
         {!loading ? (
           <>
+            <div className="tier-panel">
+              <h3>Approved Users</h3>
+              <p>Add, import, and remove approved users used by the join flow.</p>
+              <div className="tier-row">
+                <input
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                />
+                <input
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="button button-small"
+                  onClick={onAddApprovedUser}
+                  disabled={addingApprovedUser}
+                >
+                  {addingApprovedUser ? 'Adding…' : 'Add User'}
+                </button>
+              </div>
+              <textarea
+                value={approvedImportText}
+                onChange={(event) => setApprovedImportText(event.target.value)}
+                placeholder={`Steven Daggett\nSarah Daggett\nTaylor Daggett`}
+                rows={5}
+              />
+              <div className="nav-row">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={onImportApprovedUsers}
+                  disabled={importingApprovedUsers}
+                >
+                  {importingApprovedUsers ? 'Importing…' : 'Import Approved Users'}
+                </button>
+              </div>
+
+              {approvedUsers.length === 0 ? <p>No approved users yet.</p> : null}
+              {approvedUsers.map((user) => (
+                <div className="tier-row" key={user.id}>
+                  <input value={user.fullName} readOnly />
+                  <div />
+                  <button
+                    type="button"
+                    className="button button-small"
+                    onClick={() => onRemoveApprovedUser(user.id, user.fullName)}
+                    disabled={removingApprovedUserId === user.id}
+                  >
+                    {removingApprovedUserId === user.id ? 'Removing…' : 'Remove'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <div className="tier-panel">
               <h3>Bulk Tier Import</h3>
               <p>Paste structured text, JSON, or CSV-like rows (tier_number, golfer_name, odds), then replace all tiers.</p>
