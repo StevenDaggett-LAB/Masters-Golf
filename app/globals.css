@@ -193,25 +193,43 @@ select:focus {
   transition: background-color 0.35s ease;
 }
 
-.moved-up {
-  background: rgba(87, 173, 106, 0.22);
+.row-up {
+  animation: flashGreen 1.5s ease;
 }
 
-.moved-down {
-  background: rgba(202, 83, 83, 0.18);
+.row-down {
+  animation: flashRed 1.5s ease;
 }
 
-.leaderboard-table td.score-improved,
-.leaderboard-table td.score-worsened {
+.leaderboard-table td.score-up,
+.leaderboard-table td.score-down {
   transition: color 0.35s ease;
 }
 
-.leaderboard-table td.score-improved {
-  color: #7ce18f;
+.leaderboard-table td.score-up {
+  color: #7cff9e;
 }
 
-.leaderboard-table td.score-worsened {
-  color: #ff9797;
+.leaderboard-table td.score-down {
+  color: #ff8a8a;
+}
+
+@keyframes flashGreen {
+  0% {
+    background-color: rgba(0, 255, 0, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flashRed {
+  0% {
+    background-color: rgba(255, 0, 0, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 .leaderboard-golfers {
