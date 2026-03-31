@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NavLinks } from '@/components/nav-links';
+import { formatRelativeToPar } from '@/lib/formatting/golf';
 
 type LeaderboardEntry = {
   userId: string;
@@ -25,14 +26,6 @@ type LeaderboardResponse = {
   entries: LeaderboardEntry[];
   error?: string;
 };
-
-function formatRelativeToPar(score: number) {
-  if (score === 0) {
-    return 'E';
-  }
-
-  return score > 0 ? `+${score}` : `${score}`;
-}
 
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
