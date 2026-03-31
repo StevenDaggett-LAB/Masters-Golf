@@ -14,6 +14,7 @@ const links: LinkItem[] = [
   { href: '/join', label: 'Join' },
   { href: '/lobby', label: 'Lobby' },
   { href: '/draft', label: 'Draft' },
+  { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/admin', label: 'Admin', requiresAdmin: true },
 ];
 
