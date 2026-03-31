@@ -189,6 +189,31 @@ select:focus {
   font-weight: 700;
 }
 
+.leaderboard-table tr {
+  transition: background-color 0.35s ease;
+}
+
+.moved-up {
+  background: rgba(87, 173, 106, 0.22);
+}
+
+.moved-down {
+  background: rgba(202, 83, 83, 0.18);
+}
+
+.leaderboard-table td.score-improved,
+.leaderboard-table td.score-worsened {
+  transition: color 0.35s ease;
+}
+
+.leaderboard-table td.score-improved {
+  color: #7ce18f;
+}
+
+.leaderboard-table td.score-worsened {
+  color: #ff9797;
+}
+
 .leaderboard-golfers {
   list-style: none;
   margin: 0;
