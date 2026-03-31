@@ -11,13 +11,22 @@ export type GolferScoreRecord = {
   round3Score: number | null;
   round4Score: number | null;
   sundayBirdies: number;
+  statusText?: string | null;
+  currentRoundScore?: number | null;
+};
+
+export type LeaderboardGolferBreakdown = {
+  golferName: string;
+  tournamentScore: number;
+  statusText: string | null;
+  currentRoundScore: number | null;
 };
 
 export type LeaderboardEntry = {
   userId: string;
   playerFullName: string;
   teamName: string;
-  selectedGolfers: string[];
+  selectedGolfers: LeaderboardGolferBreakdown[];
   teamTotalScore: number;
   sundayBirdies: number;
   rankingPosition: number;
@@ -153,7 +162,9 @@ export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
 
   const { data, error } = await supabase
     .from('golfer_scores')
-    .select('golfer_name, total_score, made_cut, round_1_score, round_2_score, round_3_score, round_4_score, sunday_birdies')
+    .select(
+      'golfer_name, total_score, made_cut, round_1_score, round_2_score, round_3_score, round_4_score, sunday_birdies, status_text, current_round_score',
+    )
     .order('golfer_name', { ascending: true });
 
   if (error) {
@@ -173,6 +184,8 @@ export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
     round3Score: toIntOrNull(row.round_3_score),
     round4Score: toIntOrNull(row.round_4_score),
     sundayBirdies: toIntOrDefault(row.sunday_birdies, 0),
+    statusText: typeof row.status_text === 'string' ? row.status_text.trim() || null : null,
+    currentRoundScore: toIntOrNull(row.current_round_score),
   }));
 }
 
@@ -198,6 +211,8 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
     round_3_score: record.round3Score,
     round_4_score: record.round4Score,
     sunday_birdies: record.sundayBirdies,
+    status_text: record.statusText?.trim() || null,
+    current_round_score: record.currentRoundScore ?? null,
     updated_at: new Date().toISOString(),
   }));
 
@@ -232,7 +247,7 @@ export async function getLeaderboardData() {
   const highs = computeRoundHighs(scores);
 
   const scored = teams.map((team) => {
-    const selectedGolfers = [
+    const golferNames = [
       team.picks.tier1,
       team.picks.tier2,
       team.picks.tier3,
@@ -241,21 +256,38 @@ export async function getLeaderboardData() {
       team.picks.tier6,
     ];
 
-    const totals = selectedGolfers.map((golferName) => {
+    const totals = golferNames.map((golferName) => {
       const record = scoreMap.get(normalizeName(golferName));
       if (!record) {
-        return { total: 0, sundayBirdies: 0 };
+        return {
+          golferName,
+          tournamentScore: 0,
+          statusText: null,
+          currentRoundScore: null,
+          total: 0,
+          sundayBirdies: 0,
+        };
       }
 
+      const tournamentScore = calculateGolferEffectiveTotal(record, highs);
       return {
-        total: calculateGolferEffectiveTotal(record, highs),
+        golferName: record.golferName,
+        tournamentScore,
+        statusText: record.statusText ?? null,
+        currentRoundScore: record.currentRoundScore ?? null,
+        total: tournamentScore,
         sundayBirdies: record.sundayBirdies,
       };
     });
 
     return {
       ...team,
-      selectedGolfers,
+      selectedGolfers: totals.map(({ golferName, tournamentScore, statusText, currentRoundScore }) => ({
+        golferName,
+        tournamentScore,
+        statusText,
+        currentRoundScore,
+      })),
       teamTotalScore: totals.reduce((sum, item) => sum + item.total, 0),
       sundayBirdies: totals.reduce((sum, item) => sum + item.sundayBirdies, 0),
     };

@@ -7,7 +7,12 @@ type LeaderboardEntry = {
   userId: string;
   playerFullName: string;
   teamName: string;
-  selectedGolfers: string[];
+  selectedGolfers: Array<{
+    golferName: string;
+    tournamentScore: number;
+    statusText: string | null;
+    currentRoundScore: number | null;
+  }>;
   teamTotalScore: number;
   sundayBirdies: number;
   rankingPosition: number;
@@ -20,6 +25,14 @@ type LeaderboardResponse = {
   entries: LeaderboardEntry[];
   error?: string;
 };
+
+function formatRelativeToPar(score: number) {
+  if (score === 0) {
+    return 'E';
+  }
+
+  return score > 0 ? `+${score}` : `${score}`;
+}
 
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
@@ -67,12 +80,32 @@ export default function LeaderboardPage() {
               </thead>
               <tbody>
                 {data.entries.map((entry) => (
-                  <tr key={entry.userId}>
+                  <tr key={entry.userId} className={entry.rankingPosition === 1 ? 'leaderboard-leader-row' : undefined}>
                     <td>{entry.rankingPosition}</td>
                     <td>{entry.playerFullName}</td>
                     <td>{entry.teamName}</td>
-                    <td>{entry.selectedGolfers.join(', ')}</td>
-                    <td>{entry.teamTotalScore > 0 ? `+${entry.teamTotalScore}` : entry.teamTotalScore}</td>
+                    <td>
+                      <ul className="leaderboard-golfers">
+                        {entry.selectedGolfers.map((golfer) => (
+                          <li key={`${entry.userId}-${golfer.golferName}`} className="leaderboard-golfer-row">
+                            <span className="leaderboard-golfer-main">
+                              <span className="leaderboard-golfer-name">{golfer.golferName}</span>
+                              <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
+                            </span>
+                            {golfer.currentRoundScore !== null || golfer.statusText ? (
+                              <span className="leaderboard-golfer-status">
+                                {golfer.currentRoundScore !== null
+                                  ? `R: ${formatRelativeToPar(golfer.currentRoundScore)}`
+                                  : null}
+                                {golfer.currentRoundScore !== null && golfer.statusText ? ' • ' : null}
+                                {golfer.statusText}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td>{formatRelativeToPar(entry.teamTotalScore)}</td>
                     <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
                   </tr>
                 ))}

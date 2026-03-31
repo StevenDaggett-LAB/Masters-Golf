@@ -181,6 +181,46 @@ select:focus {
   vertical-align: top;
 }
 
+.leaderboard-leader-row {
+  background: rgba(87, 173, 106, 0.15);
+}
+
+.leaderboard-leader-row td:first-child {
+  font-weight: 700;
+}
+
+.leaderboard-golfers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.leaderboard-golfer-row {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.leaderboard-golfer-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.leaderboard-golfer-name {
+  white-space: nowrap;
+}
+
+.leaderboard-golfer-score {
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-golfer-status {
+  color: #c5d0c8;
+  font-size: 0.8rem;
+}
+
 @media (max-width: 640px) {
   .card {
     padding: 1.2rem;

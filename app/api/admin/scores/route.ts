@@ -41,6 +41,8 @@ function normalizeRecord(input: Record<string, unknown>) {
     round3Score: toIntOrNull(input.round_3_score ?? input.round3Score),
     round4Score: toIntOrNull(input.round_4_score ?? input.round4Score),
     sundayBirdies: toIntOrNull(input.sunday_birdies ?? input.sundayBirdies) ?? 0,
+    statusText: String(input.status_text ?? input.statusText ?? '').trim() || null,
+    currentRoundScore: toIntOrNull(input.current_round_score ?? input.currentRoundScore),
   } satisfies GolferScoreRecord;
 }
 
