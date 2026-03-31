@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/lib/supabase';
+import { env } from '@/lib/env';
 import { getDraftStatus, TeamPicks } from '@/lib/server/draft';
 
 export type GolferScoreRecord = {
@@ -29,6 +30,12 @@ type TeamRow = {
   teamName: string;
   picks: TeamPicks;
 };
+
+const inMemoryScores = new Map<string, GolferScoreRecord>();
+
+function hasSupabaseConfig() {
+  return Boolean(env.supabaseUrl && env.supabaseServiceRoleKey);
+}
 
 function normalizeName(name: string) {
   return name.trim().toLowerCase();
@@ -138,6 +145,10 @@ async function loadSavedTeams(): Promise<TeamRow[]> {
 }
 
 export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
+  if (!hasSupabaseConfig()) {
+    return Array.from(inMemoryScores.values()).sort((a, b) => a.golferName.localeCompare(b.golferName));
+  }
+
   const supabase = createSupabaseAdminClient();
 
   const { data, error } = await supabase
@@ -146,6 +157,10 @@ export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
     .order('golfer_name', { ascending: true });
 
   if (error) {
+    if (inMemoryScores.size > 0) {
+      return Array.from(inMemoryScores.values()).sort((a, b) => a.golferName.localeCompare(b.golferName));
+    }
+
     throw new Error(`Failed to load golfer scores: ${error.message}`);
   }
 
@@ -162,6 +177,16 @@ export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
 }
 
 export async function saveGolferScores(records: GolferScoreRecord[]) {
+  if (!hasSupabaseConfig()) {
+    for (const record of records) {
+      inMemoryScores.set(normalizeName(record.golferName), {
+        ...record,
+        golferName: record.golferName.trim(),
+      });
+    }
+    return;
+  }
+
   const supabase = createSupabaseAdminClient();
 
   const upsertRows = records.map((record) => ({
@@ -181,7 +206,13 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
     .upsert(upsertRows, { onConflict: 'golfer_name', ignoreDuplicates: false });
 
   if (error) {
-    throw new Error(`Failed to save golfer scores: ${error.message}`);
+    for (const record of records) {
+      inMemoryScores.set(normalizeName(record.golferName), {
+        ...record,
+        golferName: record.golferName.trim(),
+      });
+    }
+    return;
   }
 }
 
