@@ -38,19 +38,9 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
-  const [prevEntries, setPrevEntries] = useState<LeaderboardEntry[] | null>(null);
   const [rowHighlights, setRowHighlights] = useState<Record<string, RowHighlight>>({});
-  const currentEntriesRef = useRef<LeaderboardEntry[] | null>(null);
   const prevEntriesRef = useRef<LeaderboardEntry[] | null>(null);
   const clearHighlightsTimeoutRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    currentEntriesRef.current = data?.entries ?? null;
-  }, [data]);
-
-  useEffect(() => {
-    prevEntriesRef.current = prevEntries;
-  }, [prevEntries]);
 
   function getGolferStatusLine(golfer: LeaderboardEntry['selectedGolfers'][number]) {
     const roundText =
@@ -73,6 +63,8 @@ export default function LeaderboardPage() {
   }
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadLeaderboard() {
       try {
         const response = await fetch('/api/leaderboard', { cache: 'no-store' });
@@ -80,6 +72,10 @@ export default function LeaderboardPage() {
 
         if (!response.ok) {
           throw new Error(payload.error ?? 'Failed to load leaderboard.');
+        }
+
+        if (!isMounted) {
+          return;
         }
 
         const previousEntries = prevEntriesRef.current;
@@ -116,11 +112,15 @@ export default function LeaderboardPage() {
           }, 2000);
         }
 
-        setPrevEntries(currentEntriesRef.current);
         setData(payload);
+        prevEntriesRef.current = payload.entries;
         setError(null);
         setLastUpdatedAt(new Date());
       } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
         setError(loadError instanceof Error ? loadError.message : 'Failed to load leaderboard.');
       }
     }
@@ -129,6 +129,7 @@ export default function LeaderboardPage() {
     const interval = setInterval(loadLeaderboard, 30000);
 
     return () => {
+      isMounted = false;
       clearInterval(interval);
       if (clearHighlightsTimeoutRef.current !== null) {
         window.clearTimeout(clearHighlightsTimeoutRef.current);
