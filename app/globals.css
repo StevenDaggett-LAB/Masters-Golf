@@ -193,6 +193,10 @@ select:focus {
   transition: background-color 0.35s ease;
 }
 
+.leaderboard-table tbody tr {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 .row-up {
   animation: flashGreen 1.5s ease;
 }
