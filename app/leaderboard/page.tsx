@@ -31,6 +31,26 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  function getGolferStatusLine(golfer: LeaderboardEntry['selectedGolfers'][number]) {
+    const roundText =
+      golfer.currentRoundScore !== null ? `R: ${formatRelativeToPar(golfer.currentRoundScore)}` : null;
+    const statusText = golfer.statusText?.trim() || null;
+
+    if (roundText && statusText) {
+      return `(${roundText} • ${statusText})`;
+    }
+
+    if (roundText) {
+      return `(${roundText})`;
+    }
+
+    if (statusText) {
+      return `(${statusText})`;
+    }
+
+    return null;
+  }
+
   useEffect(() => {
     async function loadLeaderboard() {
       const response = await fetch('/api/leaderboard', { cache: 'no-store' });
@@ -79,23 +99,19 @@ export default function LeaderboardPage() {
                     <td>{entry.teamName}</td>
                     <td>
                       <ul className="leaderboard-golfers">
-                        {entry.selectedGolfers.map((golfer) => (
-                          <li key={`${entry.userId}-${golfer.golferName}`} className="leaderboard-golfer-row">
-                            <span className="leaderboard-golfer-main">
-                              <span className="leaderboard-golfer-name">{golfer.golferName}</span>
-                              <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
-                            </span>
-                            {golfer.currentRoundScore !== null || golfer.statusText ? (
-                              <span className="leaderboard-golfer-status">
-                                {golfer.currentRoundScore !== null
-                                  ? `R: ${formatRelativeToPar(golfer.currentRoundScore)}`
-                                  : null}
-                                {golfer.currentRoundScore !== null && golfer.statusText ? ' • ' : null}
-                                {golfer.statusText}
+                        {entry.selectedGolfers.map((golfer) => {
+                          const statusLine = getGolferStatusLine(golfer);
+
+                          return (
+                            <li key={`${entry.userId}-${golfer.golferName}`} className="leaderboard-golfer-row">
+                              <span className="leaderboard-golfer-main">
+                                <span className="leaderboard-golfer-name">{golfer.golferName}</span>
+                                <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
                               </span>
-                            ) : null}
-                          </li>
-                        ))}
+                              {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </td>
                     <td>{formatRelativeToPar(entry.teamTotalScore)}</td>
