@@ -27,6 +27,8 @@ type GolferScoreInput = {
   round3Score: number | null;
   round4Score: number | null;
   sundayBirdies: number;
+  statusText: string | null;
+  currentRoundScore: number | null;
 };
 
 type DraftStatus = 'open' | 'locked_by_admin' | 'locked_by_deadline';
@@ -211,6 +213,8 @@ function normalizeImportedScore(row: Record<string, unknown>) {
     round3Score: toIntOrNull(row.round_3_score ?? row.round3Score),
     round4Score: toIntOrNull(row.round_4_score ?? row.round4Score),
     sundayBirdies: toIntOrNull(row.sunday_birdies ?? row.sundayBirdies) ?? 0,
+    statusText: String(row.status_text ?? row.statusText ?? '').trim() || null,
+    currentRoundScore: toIntOrNull(row.current_round_score ?? row.currentRoundScore),
   } satisfies GolferScoreInput;
 }
 
@@ -251,13 +255,14 @@ function parseScoreImport(input: string): GolferScoreInput[] {
 
   return dataLines.map((line, index) => {
     const parts = line.split(/[,\t|]/).map((part) => part.trim());
-    if (parts.length !== 8) {
+    if (parts.length !== 8 && parts.length !== 10) {
       throw new Error(
-        `Line ${index + 1} must have 8 fields: golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies`,
+        `Line ${index + 1} must have 8 or 10 fields: golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies[,status_text,current_round_score]`,
       );
     }
 
-    const [golferName, totalScore, madeCut, round1, round2, round3, round4, sundayBirdies] = parts;
+    const [golferName, totalScore, madeCut, round1, round2, round3, round4, sundayBirdies, statusText, currentRoundScore] =
+      parts;
     if (!golferName) {
       throw new Error(`Line ${index + 1} is missing golfer_name.`);
     }
@@ -271,6 +276,8 @@ function parseScoreImport(input: string): GolferScoreInput[] {
       round3Score: toIntOrNull(round3),
       round4Score: toIntOrNull(round4),
       sundayBirdies: toIntOrNull(sundayBirdies) ?? 0,
+      statusText: statusText ? statusText : null,
+      currentRoundScore: toIntOrNull(currentRoundScore),
     } satisfies GolferScoreInput;
   });
 }
@@ -772,6 +779,8 @@ export default function AdminPage() {
             round_3_score: score.round3Score,
             round_4_score: score.round4Score,
             sunday_birdies: score.sundayBirdies,
+            status_text: score.statusText,
+            current_round_score: score.currentRoundScore,
           })),
         ),
       });
@@ -1106,13 +1115,14 @@ export default function AdminPage() {
             <div className="tier-panel">
               <h3>Scoring Import</h3>
               <p>
-                Admin-only scoring import. Paste JSON or CSV-like rows in this order:
+                Admin-only scoring import. Paste JSON or CSV-like rows in either supported order:
                 golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies
+                or golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies,status_text,current_round_score
               </p>
               <textarea
                 value={scoreImportText}
                 onChange={(event) => setScoreImportText(event.target.value)}
-                placeholder={`golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies\nScottie Scheffler,-10,true,-2,-3,-2,-3,7\nRory McIlroy,2,false,1,1,,,2\n\nOR\n[{\"golfer_name\":\"Scottie Scheffler\",\"total_score\":-10,\"made_cut\":true,\"round_1_score\":-2,\"round_2_score\":-3,\"round_3_score\":-2,\"round_4_score\":-3,\"sunday_birdies\":7}]`}
+                placeholder={`golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies,status_text,current_round_score\nScottie Scheffler,-10,true,-2,-3,-2,-3,7,F,-3\nRory McIlroy,2,false,1,1,,,2,Thru 14,1\n\nOR\n[{\"golfer_name\":\"Scottie Scheffler\",\"total_score\":-10,\"made_cut\":true,\"round_1_score\":-2,\"round_2_score\":-3,\"round_3_score\":-2,\"round_4_score\":-3,\"sunday_birdies\":7,\"status_text\":\"F\",\"current_round_score\":-3}]`}
                 rows={8}
               />
               <div className="nav-row">
