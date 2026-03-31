@@ -30,6 +30,7 @@ type LeaderboardResponse = {
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   function getGolferStatusLine(golfer: LeaderboardEntry['selectedGolfers'][number]) {
     const roundText =
@@ -53,19 +54,26 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     async function loadLeaderboard() {
-      const response = await fetch('/api/leaderboard', { cache: 'no-store' });
-      const payload = (await response.json()) as LeaderboardResponse;
+      try {
+        const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+        const payload = (await response.json()) as LeaderboardResponse;
 
-      if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to load leaderboard.');
+        if (!response.ok) {
+          throw new Error(payload.error ?? 'Failed to load leaderboard.');
+        }
+
+        setData(payload);
+        setError(null);
+        setLastUpdatedAt(new Date());
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load leaderboard.');
       }
-
-      setData(payload);
     }
 
-    loadLeaderboard().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load leaderboard.');
-    });
+    loadLeaderboard();
+    const interval = setInterval(loadLeaderboard, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -75,6 +83,7 @@ export default function LeaderboardPage() {
 
         {!data && !error ? <p>Loading leaderboard…</p> : null}
         {error ? <p className="error">{error}</p> : null}
+        {lastUpdatedAt ? <p>Last updated: {lastUpdatedAt.toLocaleTimeString()}</p> : null}
 
         {data && !data.isVisible ? <p>Teams will be revealed after the draft locks.</p> : null}
 
