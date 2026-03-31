@@ -50,8 +50,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { scores?: unknown[] } | unknown[];
-    const rows = Array.isArray(body) ? body : Array.isArray(body.scores) ? body.scores : [];
+    const body = (await request.json()) as unknown;
+    if (!Array.isArray(body)) {
+      return NextResponse.json({ error: 'Request body must be an array of score rows.' }, { status: 400 });
+    }
+
+    const rows = body;
     const records = rows
       .map((row) => (typeof row === 'object' && row ? normalizeRecord(row as Record<string, unknown>) : null))
       .filter((row): row is GolferScoreRecord => row !== null);

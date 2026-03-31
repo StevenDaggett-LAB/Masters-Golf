@@ -215,28 +215,30 @@ function parseScoreImport(input: string): GolferScoreInput[] {
   const hasHeader = /golfer/i.test(lines[0]);
   const dataLines = hasHeader ? lines.slice(1) : lines;
 
-  return dataLines
-    .map((line) => {
-      const [golferName, totalScore, madeCut, round1, round2, round3, round4, sundayBirdies] = line
-        .split(/[,\t|]/)
-        .map((part) => part.trim());
+  return dataLines.map((line, index) => {
+    const parts = line.split(/[,\t|]/).map((part) => part.trim());
+    if (parts.length !== 8) {
+      throw new Error(
+        `Line ${index + 1} must have 8 fields: golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies`,
+      );
+    }
 
-      if (!golferName) {
-        return null;
-      }
+    const [golferName, totalScore, madeCut, round1, round2, round3, round4, sundayBirdies] = parts;
+    if (!golferName) {
+      throw new Error(`Line ${index + 1} is missing golfer_name.`);
+    }
 
-      return {
-        golferName,
-        totalScore: toIntOrNull(totalScore) ?? 0,
-        madeCut: parseBoolean(madeCut, true),
-        round1Score: toIntOrNull(round1),
-        round2Score: toIntOrNull(round2),
-        round3Score: toIntOrNull(round3),
-        round4Score: toIntOrNull(round4),
-        sundayBirdies: toIntOrNull(sundayBirdies) ?? 0,
-      } satisfies GolferScoreInput;
-    })
-    .filter((row): row is GolferScoreInput => row !== null);
+    return {
+      golferName,
+      totalScore: toIntOrNull(totalScore) ?? 0,
+      madeCut: parseBoolean(madeCut, true),
+      round1Score: toIntOrNull(round1),
+      round2Score: toIntOrNull(round2),
+      round3Score: toIntOrNull(round3),
+      round4Score: toIntOrNull(round4),
+      sundayBirdies: toIntOrNull(sundayBirdies) ?? 0,
+    } satisfies GolferScoreInput;
+  });
 }
 
 export default function AdminPage() {
@@ -434,8 +436,8 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scores: scores.map((score) => ({
+        body: JSON.stringify(
+          scores.map((score) => ({
             golfer_name: score.golferName,
             total_score: score.totalScore,
             made_cut: score.madeCut,
@@ -445,7 +447,7 @@ export default function AdminPage() {
             round_4_score: score.round4Score,
             sunday_birdies: score.sundayBirdies,
           })),
-        }),
+        ),
       });
 
       const data = (await response.json()) as { success?: boolean; count?: number; error?: string };
