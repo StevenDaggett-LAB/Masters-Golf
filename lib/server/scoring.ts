@@ -218,7 +218,7 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
 
 export async function getLeaderboardData() {
   const status = await getDraftStatus();
-  if (!status.deadlinePassed) {
+  if (!status.effectiveLocked) {
     return {
       isVisible: false,
       hardLockTimeUtc: status.hardLockTimeUtc,
