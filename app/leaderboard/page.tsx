@@ -28,18 +28,25 @@ type LeaderboardResponse = {
 };
 
 type RowHighlight = {
-  movement: 'moved-up' | 'moved-down' | null;
-  score: 'score-improved' | 'score-worsened' | null;
+  movedUp: boolean;
+  movedDown: boolean;
+  scoreImproved: boolean;
+  scoreWorsened: boolean;
 };
 
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
-  const [prevEntries, setPrevEntries] = useState<LeaderboardEntry[]>([]);
+  const [prevEntries, setPrevEntries] = useState<LeaderboardEntry[] | null>(null);
   const [rowHighlights, setRowHighlights] = useState<Record<string, RowHighlight>>({});
-  const prevEntriesRef = useRef<LeaderboardEntry[]>([]);
+  const currentEntriesRef = useRef<LeaderboardEntry[] | null>(null);
+  const prevEntriesRef = useRef<LeaderboardEntry[] | null>(null);
   const clearHighlightsTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    currentEntriesRef.current = data?.entries ?? null;
+  }, [data]);
 
   useEffect(() => {
     prevEntriesRef.current = prevEntries;
@@ -78,7 +85,7 @@ export default function LeaderboardPage() {
         const previousEntries = prevEntriesRef.current;
         const nextHighlights: Record<string, RowHighlight> = {};
 
-        if (previousEntries.length > 0) {
+        if (previousEntries) {
           payload.entries.forEach((entry) => {
             const previousEntry = previousEntries.find((candidate) => candidate.userId === entry.userId);
 
@@ -86,21 +93,13 @@ export default function LeaderboardPage() {
               return;
             }
 
-            const movement =
-              entry.rankingPosition < previousEntry.rankingPosition
-                ? 'moved-up'
-                : entry.rankingPosition > previousEntry.rankingPosition
-                  ? 'moved-down'
-                  : null;
-            const score =
-              entry.teamTotalScore < previousEntry.teamTotalScore
-                ? 'score-improved'
-                : entry.teamTotalScore > previousEntry.teamTotalScore
-                  ? 'score-worsened'
-                  : null;
+            const movedUp = entry.rankingPosition < previousEntry.rankingPosition;
+            const movedDown = entry.rankingPosition > previousEntry.rankingPosition;
+            const scoreImproved = entry.teamTotalScore < previousEntry.teamTotalScore;
+            const scoreWorsened = entry.teamTotalScore > previousEntry.teamTotalScore;
 
-            if (movement || score) {
-              nextHighlights[entry.userId] = { movement, score };
+            if (movedUp || movedDown || scoreImproved || scoreWorsened) {
+              nextHighlights[entry.userId] = { movedUp, movedDown, scoreImproved, scoreWorsened };
             }
           });
         }
@@ -117,7 +116,7 @@ export default function LeaderboardPage() {
           }, 2000);
         }
 
-        setPrevEntries(payload.entries);
+        setPrevEntries(currentEntriesRef.current);
         setData(payload);
         setError(null);
         setLastUpdatedAt(new Date());
@@ -164,7 +163,11 @@ export default function LeaderboardPage() {
               <tbody>
                 {data.entries.map((entry) => {
                   const highlight = rowHighlights[entry.userId];
-                  const rowClasses = [entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null, highlight?.movement]
+                  const rowClasses = [
+                    entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null,
+                    highlight?.movedUp ? 'row-up' : null,
+                    highlight?.movedDown ? 'row-down' : null,
+                  ]
                     .filter(Boolean)
                     .join(' ');
 
@@ -192,7 +195,9 @@ export default function LeaderboardPage() {
                           })}
                         </ul>
                       </td>
-                      <td className={highlight?.score ?? undefined}>{formatRelativeToPar(entry.teamTotalScore)}</td>
+                      <td className={highlight?.scoreImproved ? 'score-up' : highlight?.scoreWorsened ? 'score-down' : undefined}>
+                        {formatRelativeToPar(entry.teamTotalScore)}
+                      </td>
                       <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
                     </tr>
                   );
