@@ -18,6 +18,17 @@ type TierGolfer = {
   odds: string | null;
 };
 
+type GolferScoreInput = {
+  golferName: string;
+  totalScore: number;
+  madeCut: boolean;
+  round1Score: number | null;
+  round2Score: number | null;
+  round3Score: number | null;
+  round4Score: number | null;
+  sundayBirdies: number;
+};
+
 type DraftStatus = 'open' | 'locked_by_admin' | 'locked_by_deadline';
 
 type LobbyStatus = {
@@ -129,6 +140,105 @@ function parseBulkImport(input: string): Array<{ tierNumber: number; golferName:
   return parsedRows.filter((row) => row.tierNumber >= 1 && row.tierNumber <= 6 && row.golferName.length > 0);
 }
 
+function toIntOrNull(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+  }
+  return null;
+}
+
+function parseBoolean(value: unknown, fallback: boolean) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', 'yes', 'y', '1'].includes(normalized)) return true;
+    if (['false', 'no', 'n', '0'].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
+function normalizeImportedScore(row: Record<string, unknown>) {
+  const golferName = String(row.golfer_name ?? row.golferName ?? '').trim();
+  if (!golferName) {
+    return null;
+  }
+
+  return {
+    golferName,
+    totalScore: toIntOrNull(row.total_score ?? row.totalScore) ?? 0,
+    madeCut: parseBoolean(row.made_cut ?? row.madeCut, true),
+    round1Score: toIntOrNull(row.round_1_score ?? row.round1Score),
+    round2Score: toIntOrNull(row.round_2_score ?? row.round2Score),
+    round3Score: toIntOrNull(row.round_3_score ?? row.round3Score),
+    round4Score: toIntOrNull(row.round_4_score ?? row.round4Score),
+    sundayBirdies: toIntOrNull(row.sunday_birdies ?? row.sundayBirdies) ?? 0,
+  } satisfies GolferScoreInput;
+}
+
+function parseScoreImport(input: string): GolferScoreInput[] {
+  const text = input.trim();
+  if (!text) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    const rows = Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === 'object' && parsed && 'scores' in parsed
+        ? (parsed as { scores?: unknown[] }).scores ?? []
+        : [];
+
+    const normalized = rows
+      .map((row) => (typeof row === 'object' && row ? normalizeImportedScore(row as Record<string, unknown>) : null))
+      .filter((row): row is GolferScoreInput => row !== null);
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  } catch {
+    // fall back to line parsing
+  }
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return [];
+  }
+
+  const hasHeader = /golfer/i.test(lines[0]);
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+
+  return dataLines
+    .map((line) => {
+      const [golferName, totalScore, madeCut, round1, round2, round3, round4, sundayBirdies] = line
+        .split(/[,\t|]/)
+        .map((part) => part.trim());
+
+      if (!golferName) {
+        return null;
+      }
+
+      return {
+        golferName,
+        totalScore: toIntOrNull(totalScore) ?? 0,
+        madeCut: parseBoolean(madeCut, true),
+        round1Score: toIntOrNull(round1),
+        round2Score: toIntOrNull(round2),
+        round3Score: toIntOrNull(round3),
+        round4Score: toIntOrNull(round4),
+        sundayBirdies: toIntOrNull(sundayBirdies) ?? 0,
+      } satisfies GolferScoreInput;
+    })
+    .filter((row): row is GolferScoreInput => row !== null);
+}
+
 export default function AdminPage() {
   const [rows, setRows] = useState<TierRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +246,8 @@ export default function AdminPage() {
   const [importing, setImporting] = useState(false);
   const [updatingDraftState, setUpdatingDraftState] = useState(false);
   const [importText, setImportText] = useState('');
+  const [scoreImportText, setScoreImportText] = useState('');
+  const [importingScores, setImportingScores] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -308,6 +420,48 @@ export default function AdminPage() {
     }
   }
 
+  async function onImportScores() {
+    setImportingScores(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const scores = parseScoreImport(scoreImportText);
+      if (scores.length === 0) {
+        throw new Error('No valid score rows found in import text.');
+      }
+
+      const response = await fetch('/api/admin/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scores: scores.map((score) => ({
+            golfer_name: score.golferName,
+            total_score: score.totalScore,
+            made_cut: score.madeCut,
+            round_1_score: score.round1Score,
+            round_2_score: score.round2Score,
+            round_3_score: score.round3Score,
+            round_4_score: score.round4Score,
+            sunday_birdies: score.sundayBirdies,
+          })),
+        }),
+      });
+
+      const data = (await response.json()) as { success?: boolean; count?: number; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to import golfer scores.');
+      }
+
+      setSuccess(`Imported ${data.count ?? scores.length} golfer score rows.`);
+      setScoreImportText('');
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'Failed to import golfer scores.');
+    } finally {
+      setImportingScores(false);
+    }
+  }
+
   const statusLabel =
     status?.status === 'open'
       ? 'open'
@@ -381,6 +535,30 @@ export default function AdminPage() {
                   disabled={importing}
                 >
                   {importing ? 'Replacing…' : 'Replace All Tiers'}
+                </button>
+              </div>
+            </div>
+
+            <div className="tier-panel">
+              <h3>Scoring Import</h3>
+              <p>
+                Admin-only scoring import. Paste JSON or CSV-like rows in this order:
+                golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies
+              </p>
+              <textarea
+                value={scoreImportText}
+                onChange={(event) => setScoreImportText(event.target.value)}
+                placeholder={`golfer_name,total_score,made_cut,round_1_score,round_2_score,round_3_score,round_4_score,sunday_birdies\nScottie Scheffler,-10,true,-2,-3,-2,-3,7\nRory McIlroy,2,false,1,1,,,2\n\nOR\n[{\"golfer_name\":\"Scottie Scheffler\",\"total_score\":-10,\"made_cut\":true,\"round_1_score\":-2,\"round_2_score\":-3,\"round_3_score\":-2,\"round_4_score\":-3,\"sunday_birdies\":7}]`}
+                rows={8}
+              />
+              <div className="nav-row">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={onImportScores}
+                  disabled={importingScores}
+                >
+                  {importingScores ? 'Importing…' : 'Import Scores'}
                 </button>
               </div>
             </div>

@@ -81,7 +81,8 @@ label {
   font-size: 0.9rem;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   border: 1px solid #426f4f;
   border-radius: 8px;
@@ -91,7 +92,8 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+textarea:focus {
   border-color: #57ad6a;
 }
 
@@ -159,6 +161,24 @@ select:focus {
 .button-small {
   padding: 0.55rem 0.7rem;
   font-size: 0.82rem;
+}
+
+.leaderboard-table-wrap {
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  border-bottom: 1px solid #2a5b3b;
+  padding: 0.45rem;
+  text-align: left;
+  vertical-align: top;
 }
 
 @media (max-width: 640px) {
