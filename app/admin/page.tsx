@@ -45,7 +45,34 @@ type ApprovedUser = {
   fullName: string;
 };
 
+type RegisteredUser = {
+  id: string;
+  fullName: string;
+};
+
+type TeamSelection = {
+  tier1: string;
+  tier2: string;
+  tier3: string;
+  tier4: string;
+  tier5: string;
+  tier6: string;
+};
+
+type ExistingTeam = TeamSelection & {
+  id: string;
+  user_id: string;
+};
+
 const tierNumbers = [1, 2, 3, 4, 5, 6] as const;
+const blankTeamSelection: TeamSelection = {
+  tier1: '',
+  tier2: '',
+  tier3: '',
+  tier4: '',
+  tier5: '',
+  tier6: '',
+};
 
 function makeBlankRow(tierNumber: number): TierRow {
   return {
@@ -257,6 +284,13 @@ export default function AdminPage() {
   const [importingScores, setImportingScores] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
+  const [selectedUserTeam, setSelectedUserTeam] = useState<ExistingTeam | null>(null);
+  const [adminTeamSelection, setAdminTeamSelection] = useState<TeamSelection>(blankTeamSelection);
+  const [loadingAdminTeam, setLoadingAdminTeam] = useState(false);
+  const [savingAdminTeam, setSavingAdminTeam] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [approvedImportText, setApprovedImportText] = useState('');
@@ -268,15 +302,17 @@ export default function AdminPage() {
 
   async function loadTiersAndStatus() {
     setLoading(true);
-    const [tiersResponse, statusResponse, approvedUsersResponse] = await Promise.all([
+    const [tiersResponse, statusResponse, approvedUsersResponse, teamUsersResponse] = await Promise.all([
       fetch('/api/tiers', { cache: 'no-store' }),
       fetch('/api/lobby-status', { cache: 'no-store' }),
       fetch('/api/admin/approved-users', { cache: 'no-store' }),
+      fetch('/api/admin/team-entry', { cache: 'no-store' }),
     ]);
 
     const data = (await tiersResponse.json()) as { tiers?: TierGolfer[]; error?: string };
     const statusData = (await statusResponse.json()) as LobbyStatus & { error?: string };
     const approvedUsersData = (await approvedUsersResponse.json()) as { users?: ApprovedUser[]; error?: string };
+    const teamUsersData = (await teamUsersResponse.json()) as { users?: RegisteredUser[]; error?: string };
 
     if (!tiersResponse.ok || !data.tiers) {
       setError(data.error ?? 'Failed to load tiers.');
@@ -290,6 +326,9 @@ export default function AdminPage() {
     }
     if (approvedUsersResponse.ok) {
       setApprovedUsers(approvedUsersData.users ?? []);
+    }
+    if (teamUsersResponse.ok) {
+      setRegisteredUsers(teamUsersData.users ?? []);
     }
 
     const nextRows = data.tiers.map((tier) => ({
@@ -333,11 +372,12 @@ export default function AdminPage() {
       if (!response.ok || !data.success || !data.user) {
         throw new Error(data.error ?? 'Failed to add approved user.');
       }
+      const addedUser = data.user;
 
-      setApprovedUsers((previous) => [...previous, data.user].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+      setApprovedUsers((previous) => [...previous, addedUser].sort((a, b) => a.fullName.localeCompare(b.fullName)));
       setFirstName('');
       setLastName('');
-      setSuccess(`Added ${data.user.fullName} to approved users.`);
+      setSuccess(`Added ${addedUser.fullName} to approved users.`);
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : 'Failed to add approved user.');
     } finally {
@@ -409,12 +449,96 @@ export default function AdminPage() {
     }
   }
 
+  async function loadSelectedUserTeam(nextUserId: string) {
+    if (!nextUserId) {
+      setSelectedUser(null);
+      setSelectedUserTeam(null);
+      setAdminTeamSelection(blankTeamSelection);
+      return;
+    }
+
+    setLoadingAdminTeam(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/admin/team-entry?userId=${encodeURIComponent(nextUserId)}`, {
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as {
+        user?: RegisteredUser;
+        team?: ExistingTeam | null;
+        error?: string;
+      };
+
+      if (!response.ok || !data.user) {
+        throw new Error(data.error ?? 'Failed to load selected user team.');
+      }
+
+      setSelectedUser(data.user);
+      setSelectedUserTeam(data.team ?? null);
+      setAdminTeamSelection({
+        tier1: data.team?.tier1 ?? '',
+        tier2: data.team?.tier2 ?? '',
+        tier3: data.team?.tier3 ?? '',
+        tier4: data.team?.tier4 ?? '',
+        tier5: data.team?.tier5 ?? '',
+        tier6: data.team?.tier6 ?? '',
+      });
+    } catch (teamError) {
+      setSelectedUser(null);
+      setSelectedUserTeam(null);
+      setAdminTeamSelection(blankTeamSelection);
+      setError(teamError instanceof Error ? teamError.message : 'Failed to load selected user team.');
+    } finally {
+      setLoadingAdminTeam(false);
+    }
+  }
+
+  async function onSaveAdminTeam(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedUserId) {
+      setError('Choose a registered user first.');
+      return;
+    }
+
+    setSavingAdminTeam(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/admin/team-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUserId, team: adminTeamSelection }),
+      });
+      const data = (await response.json()) as { success?: boolean; updated?: boolean; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to save admin team.');
+      }
+
+      await loadSelectedUserTeam(selectedUserId);
+      setSuccess(data.updated ? 'Team updated successfully for selected user.' : 'Team saved successfully for selected user.');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save admin team.');
+    } finally {
+      setSavingAdminTeam(false);
+    }
+  }
+
   useEffect(() => {
     loadTiersAndStatus().catch(() => {
       setError('Unable to load admin data right now.');
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    loadSelectedUserTeam(selectedUserId).catch(() => {
+      setError('Unable to load selected user team right now.');
+      setLoadingAdminTeam(false);
+    });
+  }, [selectedUserId]);
 
   const rowsByTier = useMemo(() => {
     const map = new Map<number, TierRow[]>();
@@ -424,6 +548,34 @@ export default function AdminPage() {
         rows.filter((row) => row.tierNumber === tierNumber),
       );
     }
+    return map;
+  }, [rows]);
+
+  const golfersByTier = useMemo(() => {
+    const map = new Map<number, Array<{ golferName: string; odds: string }>>();
+    for (const tierNumber of tierNumbers) {
+      map.set(tierNumber, []);
+    }
+
+    for (const row of rows) {
+      const golferName = row.golferName.trim();
+      if (!golferName) {
+        continue;
+      }
+
+      const tierList = map.get(row.tierNumber) ?? [];
+      if (!tierList.some((tierRow) => tierRow.golferName === golferName)) {
+        tierList.push({ golferName, odds: row.odds.trim() });
+      }
+      map.set(row.tierNumber, tierList);
+    }
+
+    for (const tierNumber of tierNumbers) {
+      const tierList = map.get(tierNumber) ?? [];
+      tierList.sort((a, b) => a.golferName.localeCompare(b.golferName));
+      map.set(tierNumber, tierList);
+    }
+
     return map;
   }, [rows]);
 
@@ -637,6 +789,84 @@ export default function AdminPage() {
 
         {!loading ? (
           <>
+            <div className="tier-panel">
+              <h3>Admin Team Entry</h3>
+              <p>Create or edit a registered user team directly from admin.</p>
+              <div>
+                <label htmlFor="adminTeamUser">Registered user</label>
+                <select
+                  id="adminTeamUser"
+                  value={selectedUserId}
+                  onChange={(event) => setSelectedUserId(event.target.value)}
+                >
+                  <option value="">Select a registered user</option>
+                  {registeredUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedUser ? (
+                <>
+                  <p>
+                    <strong>Selected user:</strong> {selectedUser.fullName}
+                  </p>
+                  <p>
+                    <strong>Current team:</strong> {selectedUserTeam ? 'Exists' : 'No team saved yet'}
+                  </p>
+                </>
+              ) : null}
+
+              {loadingAdminTeam ? <p>Loading selected user team…</p> : null}
+
+              <form onSubmit={onSaveAdminTeam} className="stack-form">
+                {tierNumbers.map((tierNumber) => {
+                  const key = `tier${tierNumber}` as keyof TeamSelection;
+                  const tierGolfers = golfersByTier.get(tierNumber) ?? [];
+
+                  return (
+                    <div key={key}>
+                      <label htmlFor={key}>Tier {tierNumber}</label>
+                      <select
+                        id={key}
+                        value={adminTeamSelection[key]}
+                        onChange={(event) =>
+                          setAdminTeamSelection((previous) => ({ ...previous, [key]: event.target.value }))
+                        }
+                        required
+                        disabled={!selectedUserId || status?.status !== 'open' || loadingAdminTeam}
+                      >
+                        <option value="">Select a golfer</option>
+                        {tierGolfers.map((golfer) => (
+                          <option key={`${tierNumber}-${golfer.golferName}`} value={golfer.golferName}>
+                            {golfer.golferName}
+                            {golfer.odds ? ` (${golfer.odds})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+                <div className="nav-row">
+                  <button
+                    className="button"
+                    type="submit"
+                    disabled={!selectedUserId || savingAdminTeam || status?.status !== 'open' || loadingAdminTeam}
+                  >
+                    {status?.status !== 'open'
+                      ? 'Draft Locked'
+                      : savingAdminTeam
+                        ? 'Saving…'
+                        : selectedUserTeam
+                          ? 'Update Team'
+                          : 'Save Team'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
             <div className="tier-panel">
               <h3>Approved Users</h3>
               <p>Add, import, and remove approved users used by the join flow.</p>

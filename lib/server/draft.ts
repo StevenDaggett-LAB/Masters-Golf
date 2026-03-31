@@ -18,6 +18,11 @@ export type TeamPicks = {
 
 export type DraftStatus = 'open' | 'locked_by_admin' | 'locked_by_deadline';
 
+export type RegisteredUser = {
+  id: string;
+  fullName: string;
+};
+
 const tierNumbers = [1, 2, 3, 4, 5, 6] as const;
 export const HARD_DRAFT_LOCK_UTC = '2026-04-09T03:00:00.000Z';
 
@@ -81,6 +86,23 @@ export async function replaceTiers(nextTiers: Array<{ tierNumber: number; golfer
   if (insertError) {
     throw new Error(`Failed to save tiers: ${insertError.message}`);
   }
+}
+
+
+export async function listRegisteredUsers() {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.from('users').select('id, full_name').order('full_name', { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch registered users: ${error.message}`);
+  }
+
+  return (data ?? []).map(
+    (row): RegisteredUser => ({
+      id: row.id,
+      fullName: row.full_name,
+    }),
+  );
 }
 
 export async function loadUserTeam(userId: string) {
