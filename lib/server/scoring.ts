@@ -41,6 +41,7 @@ type TeamRow = {
 };
 
 const inMemoryScores = new Map<string, GolferScoreRecord>();
+const PAR_PER_ROUND = 72;
 
 function hasSupabaseConfig() {
   return Boolean(env.supabaseUrl && env.supabaseServiceRoleKey);
@@ -89,7 +90,14 @@ function computeRoundHighs(records: GolferScoreRecord[]) {
 
   rounds.forEach((roundKey, idx) => {
     const values = records
-      .map((record) => record[roundKey])
+      .map((record) => {
+        const roundScore = record[roundKey];
+        if (typeof roundScore !== 'number') {
+          return null;
+        }
+
+        return roundScore - PAR_PER_ROUND;
+      })
       .filter((value): value is number => typeof value === 'number');
 
     highs[idx + 1] = values.length > 0 ? Math.max(...values) : 0;
@@ -98,12 +106,29 @@ function computeRoundHighs(records: GolferScoreRecord[]) {
   return highs;
 }
 
-function calculateGolferEffectiveTotal(record: GolferScoreRecord, highs: Record<number, number>) {
-  if (record.madeCut) {
-    return record.totalScore;
+function countRoundsPlayed(record: GolferScoreRecord) {
+  const rounds = [record.round1Score, record.round2Score, record.round3Score, record.round4Score];
+  return rounds.filter((roundScore): roundScore is number => typeof roundScore === 'number').length;
+}
+
+function calculateGolferRelativeScore(record: GolferScoreRecord) {
+  const roundsPlayed = countRoundsPlayed(record);
+
+  if (roundsPlayed === 0 || !Number.isFinite(record.totalScore) || record.totalScore <= 0) {
+    return 0;
   }
 
-  return record.totalScore + highs[3] + highs[4];
+  return record.totalScore - PAR_PER_ROUND * roundsPlayed;
+}
+
+function calculateGolferEffectiveTotal(record: GolferScoreRecord, highs: Record<number, number>) {
+  const relativeScore = calculateGolferRelativeScore(record);
+
+  if (record.madeCut) {
+    return relativeScore;
+  }
+
+  return relativeScore + highs[3] + highs[4];
 }
 
 async function loadSavedTeams(): Promise<TeamRow[]> {
