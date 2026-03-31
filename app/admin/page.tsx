@@ -50,6 +50,8 @@ type RegisteredUser = {
   fullName: string;
 };
 
+type TeamEntryMode = 'registered' | 'approved';
+
 type TeamSelection = {
   tier1: string;
   tier2: string;
@@ -284,10 +286,17 @@ export default function AdminPage() {
   const [importingScores, setImportingScores] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
+  const [approvedUsersWithoutRegistration, setApprovedUsersWithoutRegistration] = useState<ApprovedUser[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [teamEntryMode, setTeamEntryMode] = useState<TeamEntryMode>('registered');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [selectedUserTeam, setSelectedUserTeam] = useState<ExistingTeam | null>(null);
+  const [selectedApprovedUserId, setSelectedApprovedUserId] = useState('');
+  const [newUserFullName, setNewUserFullName] = useState('');
+  const [newUserTeamName, setNewUserTeamName] = useState('');
+  const [newUserPhone, setNewUserPhone] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
   const [adminTeamSelection, setAdminTeamSelection] = useState<TeamSelection>(blankTeamSelection);
   const [loadingAdminTeam, setLoadingAdminTeam] = useState(false);
   const [savingAdminTeam, setSavingAdminTeam] = useState(false);
@@ -312,7 +321,11 @@ export default function AdminPage() {
     const data = (await tiersResponse.json()) as { tiers?: TierGolfer[]; error?: string };
     const statusData = (await statusResponse.json()) as LobbyStatus & { error?: string };
     const approvedUsersData = (await approvedUsersResponse.json()) as { users?: ApprovedUser[]; error?: string };
-    const teamUsersData = (await teamUsersResponse.json()) as { users?: RegisteredUser[]; error?: string };
+    const teamUsersData = (await teamUsersResponse.json()) as {
+      users?: RegisteredUser[];
+      approvedUsersWithoutRegistration?: ApprovedUser[];
+      error?: string;
+    };
 
     if (!tiersResponse.ok || !data.tiers) {
       setError(data.error ?? 'Failed to load tiers.');
@@ -329,6 +342,7 @@ export default function AdminPage() {
     }
     if (teamUsersResponse.ok) {
       setRegisteredUsers(teamUsersData.users ?? []);
+      setApprovedUsersWithoutRegistration(teamUsersData.approvedUsersWithoutRegistration ?? []);
     }
 
     const nextRows = data.tiers.map((tier) => ({
@@ -497,8 +511,17 @@ export default function AdminPage() {
 
   async function onSaveAdminTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedUserId) {
+    const isRegisteredMode = teamEntryMode === 'registered';
+    if (isRegisteredMode && !selectedUserId) {
       setError('Choose a registered user first.');
+      return;
+    }
+    if (!isRegisteredMode && !newUserFullName.trim()) {
+      setError('Select or enter an approved full name first.');
+      return;
+    }
+    if (!isRegisteredMode && !newUserTeamName.trim()) {
+      setError('Team name is required when creating a user from approved list.');
       return;
     }
 
@@ -510,15 +533,42 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/team-entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUserId, team: adminTeamSelection }),
+        body: JSON.stringify({
+          userId: isRegisteredMode ? selectedUserId : undefined,
+          approvedUserId: isRegisteredMode ? undefined : selectedApprovedUserId || undefined,
+          fullName: isRegisteredMode ? undefined : newUserFullName,
+          teamName: isRegisteredMode ? undefined : newUserTeamName,
+          phone: isRegisteredMode ? undefined : newUserPhone,
+          email: isRegisteredMode ? undefined : newUserEmail,
+          team: adminTeamSelection,
+        }),
       });
-      const data = (await response.json()) as { success?: boolean; updated?: boolean; error?: string };
+      const data = (await response.json()) as {
+        success?: boolean;
+        updated?: boolean;
+        createdUser?: boolean;
+        userId?: string;
+        error?: string;
+      };
       if (!response.ok || !data.success) {
         throw new Error(data.error ?? 'Failed to save admin team.');
       }
-
-      await loadSelectedUserTeam(selectedUserId);
-      setSuccess(data.updated ? 'Team updated successfully for selected user.' : 'Team saved successfully for selected user.');
+      if (isRegisteredMode) {
+        await loadSelectedUserTeam(selectedUserId);
+        setSuccess(data.updated ? 'Team updated successfully for selected user.' : 'Team saved successfully for selected user.');
+      } else {
+        await loadTiersAndStatus();
+        setTeamEntryMode('registered');
+        if (data.userId) {
+          setSelectedUserId(data.userId);
+          await loadSelectedUserTeam(data.userId);
+        }
+        setSuccess(
+          data.createdUser
+            ? 'Registered user and team created successfully.'
+            : 'Existing registered user found and team saved successfully.',
+        );
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save admin team.');
     } finally {
@@ -539,6 +589,13 @@ export default function AdminPage() {
       setLoadingAdminTeam(false);
     });
   }, [selectedUserId]);
+
+  useEffect(() => {
+    const selectedApprovedUser = approvedUsersWithoutRegistration.find((user) => user.id === selectedApprovedUserId);
+    if (selectedApprovedUser) {
+      setNewUserFullName(selectedApprovedUser.fullName);
+    }
+  }, [approvedUsersWithoutRegistration, selectedApprovedUserId]);
 
   const rowsByTier = useMemo(() => {
     const map = new Map<number, TierRow[]>();
@@ -791,24 +848,112 @@ export default function AdminPage() {
           <>
             <div className="tier-panel">
               <h3>Admin Team Entry</h3>
-              <p>Create or edit a registered user team directly from admin.</p>
-              <div>
-                <label htmlFor="adminTeamUser">Registered user</label>
-                <select
-                  id="adminTeamUser"
-                  value={selectedUserId}
-                  onChange={(event) => setSelectedUserId(event.target.value)}
-                >
-                  <option value="">Select a registered user</option>
-                  {registeredUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.fullName}
-                    </option>
-                  ))}
-                </select>
+              <p>Create or edit a registered user team directly from admin, including approved users not yet registered.</p>
+              <div className="nav-row">
+                <label>
+                  <input
+                    type="radio"
+                    name="teamEntryMode"
+                    value="registered"
+                    checked={teamEntryMode === 'registered'}
+                    onChange={() => setTeamEntryMode('registered')}
+                  />{' '}
+                  Existing registered user
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="teamEntryMode"
+                    value="approved"
+                    checked={teamEntryMode === 'approved'}
+                    onChange={() => setTeamEntryMode('approved')}
+                  />{' '}
+                  Approved user not yet registered
+                </label>
               </div>
 
-              {selectedUser ? (
+              {teamEntryMode === 'registered' ? (
+                <div>
+                  <label htmlFor="adminTeamUser">Registered user</label>
+                  <select
+                    id="adminTeamUser"
+                    value={selectedUserId}
+                    onChange={(event) => setSelectedUserId(event.target.value)}
+                  >
+                    <option value="">Select a registered user</option>
+                    {registeredUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="approvedUserToRegister">Approved user</label>
+                    <select
+                      id="approvedUserToRegister"
+                      value={selectedApprovedUserId}
+                      onChange={(event) => setSelectedApprovedUserId(event.target.value)}
+                      disabled={status?.status !== 'open'}
+                    >
+                      <option value="">Select from approved list</option>
+                      {approvedUsersWithoutRegistration.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="newUserFullName">Full name (approved user)</label>
+                    <input
+                      id="newUserFullName"
+                      value={newUserFullName}
+                      onChange={(event) => setNewUserFullName(event.target.value)}
+                      list="approved-user-full-names"
+                      required
+                      disabled={status?.status !== 'open'}
+                    />
+                    <datalist id="approved-user-full-names">
+                      {approvedUsersWithoutRegistration.map((user) => (
+                        <option key={user.id} value={user.fullName} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label htmlFor="newUserTeamName">Team name</label>
+                    <input
+                      id="newUserTeamName"
+                      value={newUserTeamName}
+                      onChange={(event) => setNewUserTeamName(event.target.value)}
+                      required
+                      disabled={status?.status !== 'open'}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="newUserPhone">Phone (optional)</label>
+                    <input
+                      id="newUserPhone"
+                      value={newUserPhone}
+                      onChange={(event) => setNewUserPhone(event.target.value)}
+                      disabled={status?.status !== 'open'}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="newUserEmail">Email (optional)</label>
+                    <input
+                      id="newUserEmail"
+                      value={newUserEmail}
+                      onChange={(event) => setNewUserEmail(event.target.value)}
+                      disabled={status?.status !== 'open'}
+                    />
+                  </div>
+                </>
+              )}
+
+              {teamEntryMode === 'registered' && selectedUser ? (
                 <>
                   <p>
                     <strong>Selected user:</strong> {selectedUser.fullName}
@@ -836,7 +981,11 @@ export default function AdminPage() {
                           setAdminTeamSelection((previous) => ({ ...previous, [key]: event.target.value }))
                         }
                         required
-                        disabled={!selectedUserId || status?.status !== 'open' || loadingAdminTeam}
+                        disabled={
+                          (teamEntryMode === 'registered' ? !selectedUserId : !newUserFullName.trim()) ||
+                          status?.status !== 'open' ||
+                          loadingAdminTeam
+                        }
                       >
                         <option value="">Select a golfer</option>
                         {tierGolfers.map((golfer) => (
@@ -853,15 +1002,24 @@ export default function AdminPage() {
                   <button
                     className="button"
                     type="submit"
-                    disabled={!selectedUserId || savingAdminTeam || status?.status !== 'open' || loadingAdminTeam}
+                    disabled={
+                      (teamEntryMode === 'registered'
+                        ? !selectedUserId
+                        : !newUserFullName.trim() || !newUserTeamName.trim()) ||
+                      savingAdminTeam ||
+                      status?.status !== 'open' ||
+                      loadingAdminTeam
+                    }
                   >
                     {status?.status !== 'open'
                       ? 'Draft Locked'
                       : savingAdminTeam
                         ? 'Saving…'
-                        : selectedUserTeam
+                        : teamEntryMode === 'registered' && selectedUserTeam
                           ? 'Update Team'
-                          : 'Save Team'}
+                          : teamEntryMode === 'approved'
+                            ? 'Create User + Save Team'
+                            : 'Save Team'}
                   </button>
                 </div>
               </form>
