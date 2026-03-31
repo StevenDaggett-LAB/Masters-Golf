@@ -99,13 +99,11 @@ function computeRoundHighs(records: GolferScoreRecord[]) {
 }
 
 function calculateGolferEffectiveTotal(record: GolferScoreRecord, highs: Record<number, number>) {
-  const round1 = record.round1Score ?? 0;
-  const round2 = record.round2Score ?? 0;
+  if (record.madeCut) {
+    return record.totalScore;
+  }
 
-  const round3 = record.madeCut ? record.round3Score ?? 0 : highs[3];
-  const round4 = record.madeCut ? record.round4Score ?? 0 : highs[4];
-
-  return round1 + round2 + round3 + round4;
+  return record.totalScore + highs[3] + highs[4];
 }
 
 async function loadSavedTeams(): Promise<TeamRow[]> {
