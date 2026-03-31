@@ -1,0 +1,124 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { isAdmin } from '@/lib/server/admin-auth';
+import {
+  fetchTiers,
+  hasExactDuplicateTeam,
+  isDraftLocked,
+  listRegisteredUsers,
+  loadUserTeam,
+  normalizeTeamPicks,
+  saveUserTeam,
+} from '@/lib/server/draft';
+
+function validateTeamInput(body: { userId?: string; team?: Record<string, string> }) {
+  const userId = body.userId?.trim();
+  if (!userId) {
+    return { ok: false as const, status: 400, message: 'A registered user is required.' };
+  }
+
+  const picks = normalizeTeamPicks(body.team ?? {});
+  const hasMissingTier = Object.values(picks).some((value) => !value);
+  if (hasMissingTier) {
+    return { ok: false as const, status: 400, message: 'Select one golfer in each tier.' };
+  }
+
+  return { ok: true as const, userId, picks };
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAdmin(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = request.nextUrl.searchParams.get('userId')?.trim();
+
+  try {
+    if (!userId) {
+      const users = await listRegisteredUsers();
+      return NextResponse.json({ users });
+    }
+
+    const users = await listRegisteredUsers();
+    const selectedUser = users.find((user) => user.id === userId);
+    if (!selectedUser) {
+      return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+    }
+
+    const team = await loadUserTeam(userId);
+    return NextResponse.json({ user: selectedUser, team });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to load admin team entry data.' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!isAdmin(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = (await request.json()) as { userId?: string; team?: Record<string, string> };
+    const parsed = validateTeamInput(body);
+
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.message }, { status: parsed.status });
+    }
+
+    const locked = await isDraftLocked();
+    if (locked) {
+      return NextResponse.json(
+        { error: 'Draft is locked. Team edits closed on April 8, 2026 at 8:00 PM Pacific.' },
+        { status: 403 },
+      );
+    }
+
+    const tiers = await fetchTiers();
+    const tierMap = new Map<number, Set<string>>();
+    for (const tier of tiers) {
+      if (!tierMap.has(tier.tierNumber)) {
+        tierMap.set(tier.tierNumber, new Set());
+      }
+      tierMap.get(tier.tierNumber)?.add(tier.golferName);
+    }
+
+    const pickList = [
+      parsed.picks.tier1,
+      parsed.picks.tier2,
+      parsed.picks.tier3,
+      parsed.picks.tier4,
+      parsed.picks.tier5,
+      parsed.picks.tier6,
+    ];
+
+    for (let i = 0; i < pickList.length; i += 1) {
+      const tierNumber = i + 1;
+      if (!tierMap.get(tierNumber)?.has(pickList[i])) {
+        return NextResponse.json(
+          { error: `Invalid golfer selected for tier ${tierNumber}.` },
+          { status: 400 },
+        );
+      }
+    }
+
+    const duplicate = await hasExactDuplicateTeam(parsed.picks, parsed.userId);
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          error: 'This exact team has already been taken. Please change at least one golfer.',
+        },
+        { status: 409 },
+      );
+    }
+
+    const saved = await saveUserTeam(parsed.userId, parsed.picks);
+    return NextResponse.json({ success: true, updated: saved.updated });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to save team.' },
+      { status: 500 },
+    );
+  }
+}
