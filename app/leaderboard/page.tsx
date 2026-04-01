@@ -34,14 +34,24 @@ type RowHighlight = {
   scoreWorsened: boolean;
 };
 
+type ScoreUpdateHighlight = {
+  golferRows: Record<string, true>;
+  teamTotals: Record<string, true>;
+};
+
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [prevEntries, setPrevEntries] = useState<LeaderboardEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [rowHighlights, setRowHighlights] = useState<Record<string, RowHighlight>>({});
+  const [scoreUpdateHighlights, setScoreUpdateHighlights] = useState<ScoreUpdateHighlight>({
+    golferRows: {},
+    teamTotals: {},
+  });
   const prevEntriesRef = useRef<LeaderboardEntry[] | null>(null);
   const clearHighlightsTimeoutRef = useRef<number | null>(null);
+  const clearScoreUpdatesTimeoutRef = useRef<number | null>(null);
 
   function getGolferStatusLine(golfer: LeaderboardEntry['selectedGolfers'][number]) {
     const roundText =
@@ -81,6 +91,7 @@ export default function LeaderboardPage() {
 
         const previousEntries = prevEntriesRef.current;
         const nextHighlights: Record<string, RowHighlight> = {};
+        const nextScoreUpdates: ScoreUpdateHighlight = { golferRows: {}, teamTotals: {} };
 
         if (previousEntries) {
           payload.entries.forEach((entry) => {
@@ -94,10 +105,27 @@ export default function LeaderboardPage() {
             const movedDown = entry.rankingPosition > previousEntry.rankingPosition;
             const scoreImproved = entry.teamTotalScore < previousEntry.teamTotalScore;
             const scoreWorsened = entry.teamTotalScore > previousEntry.teamTotalScore;
+            const teamTotalChanged = entry.teamTotalScore !== previousEntry.teamTotalScore;
 
             if (movedUp || movedDown || scoreImproved || scoreWorsened) {
               nextHighlights[entry.userId] = { movedUp, movedDown, scoreImproved, scoreWorsened };
             }
+
+            if (teamTotalChanged) {
+              nextScoreUpdates.teamTotals[entry.userId] = true;
+            }
+
+            const previousScoresByGolfer = new Map(
+              previousEntry.selectedGolfers.map((golfer) => [golfer.golferName, golfer.tournamentScore])
+            );
+
+            entry.selectedGolfers.forEach((golfer) => {
+              const previousGolferScore = previousScoresByGolfer.get(golfer.golferName);
+
+              if (previousGolferScore !== undefined && previousGolferScore !== golfer.tournamentScore) {
+                nextScoreUpdates.golferRows[`${entry.userId}-${golfer.golferName}`] = true;
+              }
+            });
           });
         }
 
@@ -111,6 +139,21 @@ export default function LeaderboardPage() {
           clearHighlightsTimeoutRef.current = window.setTimeout(() => {
             setRowHighlights({});
           }, 2000);
+        }
+
+        if (clearScoreUpdatesTimeoutRef.current !== null) {
+          window.clearTimeout(clearScoreUpdatesTimeoutRef.current);
+        }
+
+        setScoreUpdateHighlights(nextScoreUpdates);
+
+        if (
+          Object.keys(nextScoreUpdates.golferRows).length > 0 ||
+          Object.keys(nextScoreUpdates.teamTotals).length > 0
+        ) {
+          clearScoreUpdatesTimeoutRef.current = window.setTimeout(() => {
+            setScoreUpdateHighlights({ golferRows: {}, teamTotals: {} });
+          }, 1000);
         }
 
         setData(payload);
@@ -135,6 +178,9 @@ export default function LeaderboardPage() {
       clearInterval(interval);
       if (clearHighlightsTimeoutRef.current !== null) {
         window.clearTimeout(clearHighlightsTimeoutRef.current);
+      }
+      if (clearScoreUpdatesTimeoutRef.current !== null) {
+        window.clearTimeout(clearScoreUpdatesTimeoutRef.current);
       }
     };
   }, []);
@@ -250,9 +296,13 @@ export default function LeaderboardPage() {
                         <ul className="leaderboard-golfers">
                           {entry.selectedGolfers.map((golfer) => {
                             const statusLine = getGolferStatusLine(golfer);
+                            const golferKey = `${entry.userId}-${golfer.golferName}`;
+                            const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
+                              ? 'leaderboard-golfer-row score-updated'
+                              : 'leaderboard-golfer-row';
 
                             return (
-                              <li key={`${entry.userId}-${golfer.golferName}`} className="leaderboard-golfer-row">
+                              <li key={golferKey} className={golferRowClass}>
                                 <span className="leaderboard-golfer-main">
                                   <span className="leaderboard-golfer-name">{golfer.golferName}</span>
                                   <span className="leaderboard-golfer-score">
@@ -265,7 +315,15 @@ export default function LeaderboardPage() {
                           })}
                         </ul>
                       </td>
-                      <td className={highlight?.scoreImproved ? 'score-up' : highlight?.scoreWorsened ? 'score-down' : undefined}>
+                      <td
+                        className={[
+                          highlight?.scoreImproved ? 'score-up' : null,
+                          highlight?.scoreWorsened ? 'score-down' : null,
+                          scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || undefined}
+                      >
                         {formatRelativeToPar(entry.teamTotalScore)}
                       </td>
                       <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
