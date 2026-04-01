@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { NavLinks } from '@/components/nav-links';
 import { formatRelativeToPar } from '@/lib/formatting/golf';
 
@@ -53,24 +53,50 @@ export default function LeaderboardPage() {
   const clearHighlightsTimeoutRef = useRef<number | null>(null);
   const clearScoreUpdatesTimeoutRef = useRef<number | null>(null);
 
-  function getGolferStatusLine(golfer: LeaderboardEntry['selectedGolfers'][number]) {
-    const roundText =
-      golfer.currentRoundScore !== null ? `R: ${formatRelativeToPar(golfer.currentRoundScore)}` : null;
-    const statusText = golfer.statusText?.trim() || null;
+  function getTeamToday(entry: LeaderboardEntry) {
+    const roundScores = entry.selectedGolfers
+      .map((golfer) => golfer.currentRoundScore)
+      .filter((value): value is number => value !== null);
 
-    if (roundText && statusText) {
-      return `(${roundText} • ${statusText})`;
+    if (roundScores.length === 0) {
+      return '—';
     }
 
-    if (roundText) {
-      return `(${roundText})`;
-    }
+    return formatRelativeToPar(roundScores.reduce((sum, score) => sum + score, 0));
+  }
 
-    if (statusText) {
-      return `(${statusText})`;
-    }
+  function getTeamThruSummary(entry: LeaderboardEntry) {
+    const summary = entry.selectedGolfers.reduce(
+      (acc, golfer) => {
+        const status = golfer.statusText?.trim().toUpperCase() || '';
 
-    return null;
+        if (!status) {
+          acc.teeing += 1;
+          return acc;
+        }
+
+        if (status === 'F' || status.startsWith('F ')) {
+          acc.finished += 1;
+          return acc;
+        }
+
+        if (/^\d+$/.test(status) || status.includes('THRU') || status.includes('HOLE')) {
+          acc.active += 1;
+          return acc;
+        }
+
+        if (status.includes(':') || status.includes('AM') || status.includes('PM') || status.includes('TEE')) {
+          acc.teeing += 1;
+          return acc;
+        }
+
+        acc.active += 1;
+        return acc;
+      },
+      { finished: 0, active: 0, teeing: 0 }
+    );
+
+    return `F:${summary.finished} A:${summary.active} T:${summary.teeing}`;
   }
 
   useEffect(() => {
@@ -254,7 +280,7 @@ export default function LeaderboardPage() {
 
         {!data && !error ? <p>Loading leaderboard…</p> : null}
         {error ? <p className="error">{error}</p> : null}
-        {lastUpdatedAt ? <p>Last updated: {lastUpdatedAt.toLocaleTimeString()}</p> : null}
+        {lastUpdatedAt ? <p className="leaderboard-meta-line">Last updated: {lastUpdatedAt.toLocaleTimeString()}</p> : null}
 
         {data && !data.isVisible ? <p>Teams will be revealed after the draft locks.</p> : null}
 
@@ -267,7 +293,8 @@ export default function LeaderboardPage() {
                     <th>Rank</th>
                     <th>Player</th>
                     <th>Team</th>
-                    <th>Golfers</th>
+                    <th>Today</th>
+                    <th>Thru</th>
                     <th>Total</th>
                     <th>Tiebreaker</th>
                   </tr>
@@ -284,51 +311,68 @@ export default function LeaderboardPage() {
                       .join(' ');
 
                     return (
-                      <tr key={entry.userId} className={rowClasses || undefined}>
-                        <td>
-                          <span className="rank-with-movement">
-                            <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
-                            {getRankMovement(entry)}
-                          </span>
-                        </td>
-                        <td>{entry.playerFullName}</td>
-                        <td>{entry.teamName}</td>
-                        <td>
-                          <ul className="leaderboard-golfers">
-                            {entry.selectedGolfers.map((golfer) => {
-                              const statusLine = getGolferStatusLine(golfer);
-                              const golferKey = `${entry.userId}-${golfer.golferName}`;
-                              const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
-                                ? 'leaderboard-golfer-row score-updated'
-                                : 'leaderboard-golfer-row';
+                      <Fragment key={entry.userId}>
+                        <tr key={entry.userId} className={rowClasses || undefined}>
+                          <td className="leaderboard-team-rank">
+                            <span className="rank-with-movement">
+                              <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
+                              {getRankMovement(entry)}
+                            </span>
+                          </td>
+                          <td className="leaderboard-team-player">{entry.playerFullName}</td>
+                          <td className="leaderboard-team-name">{entry.teamName}</td>
+                          <td>{getTeamToday(entry)}</td>
+                          <td>{getTeamThruSummary(entry)}</td>
+                          <td
+                            className={[
+                              'leaderboard-team-total',
+                              highlight?.scoreImproved ? 'score-up' : null,
+                              highlight?.scoreWorsened ? 'score-down' : null,
+                              scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' ') || undefined}
+                          >
+                            {formatRelativeToPar(entry.teamTotalScore)}
+                          </td>
+                          <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
+                        </tr>
+                        <tr key={`${entry.userId}-golfers`} className="leaderboard-golfer-detail-row">
+                          <td colSpan={7}>
+                            <div className="leaderboard-golfer-detail-grid leaderboard-golfer-detail-head">
+                              <span>Golfer</span>
+                              <span>Score</span>
+                              <span>Status</span>
+                              <span>Round</span>
+                            </div>
+                            <ul className="leaderboard-golfers">
+                              {entry.selectedGolfers.map((golfer) => {
+                                const golferKey = `${entry.userId}-${golfer.golferName}`;
+                                const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
+                                  ? 'leaderboard-golfer-row score-updated'
+                                  : 'leaderboard-golfer-row';
 
-                              return (
-                                <li key={golferKey} className={golferRowClass}>
-                                  <span className="leaderboard-golfer-main">
-                                    <span className="leaderboard-golfer-name">{golfer.golferName}</span>
-                                    <span className="leaderboard-golfer-score">
-                                      {formatRelativeToPar(golfer.tournamentScore)}
+                                return (
+                                  <li key={golferKey} className={golferRowClass}>
+                                    <span className="leaderboard-golfer-detail-grid">
+                                      <span className="leaderboard-golfer-name">{golfer.golferName}</span>
+                                      <span className="leaderboard-golfer-score">
+                                        {formatRelativeToPar(golfer.tournamentScore)}
+                                      </span>
+                                      <span className="leaderboard-golfer-status">{golfer.statusText?.trim() || '—'}</span>
+                                      <span className="leaderboard-golfer-round">
+                                        {golfer.currentRoundScore !== null
+                                          ? formatRelativeToPar(golfer.currentRoundScore)
+                                          : '—'}
+                                      </span>
                                     </span>
-                                  </span>
-                                  {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </td>
-                        <td
-                          className={[
-                            highlight?.scoreImproved ? 'score-up' : null,
-                            highlight?.scoreWorsened ? 'score-down' : null,
-                            scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' ') || undefined}
-                        >
-                          {formatRelativeToPar(entry.teamTotalScore)}
-                        </td>
-                        <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
-                      </tr>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </td>
+                        </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -362,6 +406,12 @@ export default function LeaderboardPage() {
                       <strong>Team:</strong> {entry.teamName}
                     </p>
                     <p className="leaderboard-mobile-meta">
+                      <strong>Today:</strong> {getTeamToday(entry)}
+                    </p>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Thru:</strong> {getTeamThruSummary(entry)}
+                    </p>
+                    <p className="leaderboard-mobile-meta">
                       <strong>Total:</strong>{' '}
                       <span
                         className={[
@@ -381,9 +431,14 @@ export default function LeaderboardPage() {
                     </p>
                     <div>
                       <strong>Golfers</strong>
+                      <div className="leaderboard-golfer-detail-grid leaderboard-golfer-detail-head leaderboard-golfer-detail-mobile-head">
+                        <span>Golfer</span>
+                        <span>Score</span>
+                        <span>Status</span>
+                        <span>Round</span>
+                      </div>
                       <ul className="leaderboard-golfers">
                         {entry.selectedGolfers.map((golfer) => {
-                          const statusLine = getGolferStatusLine(golfer);
                           const golferKey = `${entry.userId}-${golfer.golferName}`;
                           const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
                             ? 'leaderboard-golfer-row score-updated'
@@ -391,11 +446,14 @@ export default function LeaderboardPage() {
 
                           return (
                             <li key={`mobile-${golferKey}`} className={golferRowClass}>
-                              <span className="leaderboard-golfer-main">
+                              <span className="leaderboard-golfer-detail-grid">
                                 <span className="leaderboard-golfer-name">{golfer.golferName}</span>
                                 <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
+                                <span className="leaderboard-golfer-status">{golfer.statusText?.trim() || '—'}</span>
+                                <span className="leaderboard-golfer-round">
+                                  {golfer.currentRoundScore !== null ? formatRelativeToPar(golfer.currentRoundScore) : '—'}
+                                </span>
                               </span>
-                              {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
                             </li>
                           );
                         })}
