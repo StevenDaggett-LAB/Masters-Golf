@@ -199,6 +199,29 @@ export async function setDraftAdminState(nextState: 'open' | 'locked') {
   }
 }
 
+export async function resetTournamentData() {
+  const supabase = createSupabaseAdminClient();
+
+  const { error: deleteScoresError } = await supabase.from('golfer_scores').delete().not('id', 'is', null);
+  if (deleteScoresError) {
+    throw new Error(`Failed to reset golfer scores: ${deleteScoresError.message}`);
+  }
+
+  const { error: deleteUsersError } = await supabase.from('users').delete().not('id', 'is', null);
+  if (deleteUsersError) {
+    throw new Error(`Failed to reset users: ${deleteUsersError.message}`);
+  }
+
+  const { error: resetDraftError } = await supabase
+    .from('settings')
+    .update({ draft_open: true, draft_locked: false, lock_time: null })
+    .eq('id', 1);
+
+  if (resetDraftError) {
+    throw new Error(`Failed to reset draft settings: ${resetDraftError.message}`);
+  }
+}
+
 export async function hasExactDuplicateTeam(team: TeamPicks, excludeUserId: string) {
   const supabase = createSupabaseAdminClient();
   const { count, error } = await supabase
