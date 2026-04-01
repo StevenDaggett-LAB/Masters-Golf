@@ -137,6 +137,40 @@ export default function LeaderboardPage() {
     };
   }, []);
 
+  function buildDisplayedRanks(entries: LeaderboardEntry[]) {
+    const scoreGroups = new Map<number, { rank: number; count: number }>();
+    const displayedRanks = new Map<string, string>();
+
+    entries.forEach((entry, index) => {
+      const existingGroup = scoreGroups.get(entry.teamTotalScore);
+
+      if (existingGroup) {
+        scoreGroups.set(entry.teamTotalScore, {
+          rank: existingGroup.rank,
+          count: existingGroup.count + 1,
+        });
+        return;
+      }
+
+      scoreGroups.set(entry.teamTotalScore, { rank: index + 1, count: 1 });
+    });
+
+    entries.forEach((entry) => {
+      const group = scoreGroups.get(entry.teamTotalScore);
+      const rankLabel = !group
+        ? `${entry.rankingPosition}`
+        : group.count > 1
+          ? `T${group.rank}`
+          : `${group.rank}`;
+
+      displayedRanks.set(entry.userId, rankLabel);
+    });
+
+    return displayedRanks;
+  }
+
+  const displayedRanks = data?.isVisible ? buildDisplayedRanks(data.entries) : null;
+
   return (
     <main>
       <section className="card">
@@ -174,7 +208,7 @@ export default function LeaderboardPage() {
 
                   return (
                     <tr key={entry.userId} className={rowClasses || undefined}>
-                      <td>{entry.rankingPosition}</td>
+                      <td>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</td>
                       <td>{entry.playerFullName}</td>
                       <td>{entry.teamName}</td>
                       <td>
