@@ -372,3 +372,78 @@ select:focus {
     white-space: normal;
   }
 }
+
+.landing-main {
+  background:
+    radial-gradient(circle at 12% 14%, rgba(120, 173, 129, 0.18), transparent 42%),
+    radial-gradient(circle at 85% 18%, rgba(198, 165, 90, 0.12), transparent 35%),
+    linear-gradient(165deg, #0a2415 0%, #113420 55%, #0b1f14 100%);
+}
+
+.landing-card {
+  border-color: #476c52;
+  background:
+    linear-gradient(180deg, rgba(21, 52, 34, 0.92), rgba(13, 35, 22, 0.96)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.02) 0,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.landing-card-loaded {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.landing-kicker {
+  margin: 0;
+  color: #d4b56a;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.landing-card h1 {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: clamp(2rem, 4.8vw, 2.8rem);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.landing-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.2rem;
+}
+
+.landing-enter-button {
+  font-size: 1rem;
+  padding: 0.82rem 1.35rem;
+  background: linear-gradient(145deg, #32924a, #25703a);
+  border: 1px solid rgba(227, 246, 214, 0.25);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+}
+
+.landing-enter-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 26px rgba(0, 0, 0, 0.36);
+}
+
+.landing-theme-button {
+  background: rgba(11, 30, 19, 0.9);
+  border: 1px solid #40684b;
+}
+
+.landing-theme-button:hover {
+  background: rgba(14, 39, 25, 0.95);
+}
