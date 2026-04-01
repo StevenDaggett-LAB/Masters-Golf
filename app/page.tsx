@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { NavLinks } from '@/components/nav-links';
 import { AdminAccessButton } from '@/components/admin-access-button';
 
 type ThemeAudio = {
@@ -97,6 +96,11 @@ export default function LandingPage() {
 
   return (
     <main className="landing-main">
+      <div className={`landing-logo-wrap ${isLoaded ? 'landing-logo-loaded' : ''}`}>
+        <p className="landing-logo-mark" aria-label="Masters Golf Pool logo">
+          Masters Golf Pool
+        </p>
+      </div>
       <section className={`card landing-card ${isLoaded ? 'landing-card-loaded' : ''}`}>
         <p className="landing-kicker">Augusta Season</p>
         <h1>Masters Golf Pool</h1>
@@ -109,7 +113,12 @@ export default function LandingPage() {
           <Link className="button landing-enter-button" href="/join">
             Enter Pool
           </Link>
-          <button type="button" className="button landing-theme-button" onClick={toggleTheme}>
+          <button
+            type="button"
+            className={`button landing-theme-button ${isPlayingTheme ? 'landing-theme-button-active' : ''}`}
+            onClick={toggleTheme}
+            aria-pressed={isPlayingTheme}
+          >
             {isPlayingTheme ? 'Mute' : 'Play Theme'}
           </button>
         </div>
@@ -117,7 +126,6 @@ export default function LandingPage() {
         <div className="nav-row">
           <AdminAccessButton mode="enter" />
         </div>
-        <NavLinks />
       </section>
     </main>
   );
