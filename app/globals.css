@@ -617,3 +617,45 @@ select:focus {
   border-color: #82b48f;
   box-shadow: inset 0 0 0 1px rgba(223, 244, 215, 0.2), 0 8px 18px rgba(0, 0, 0, 0.25);
 }
+.enter-button {
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  box-shadow: 0 0 20px rgba(80, 200, 120, 0.25);
+}
+.card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.audio-active {
+  background: #1f6f43;
+  box-shadow: 0 0 12px rgba(80, 200, 120, 0.4);
+}
+background: radial-gradient(circle at center, #0f3d2e, #06281d);
+.site-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 20px;
+}
+
+.logo-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.site-logo {
+  width: 160px;
+  height: auto;
+  opacity: 0.95;
+
+}
