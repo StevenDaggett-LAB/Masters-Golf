@@ -218,6 +218,31 @@ select:focus {
   color: #ff8a8a;
 }
 
+.rank-with-movement {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rank-movement {
+  display: inline-block;
+  min-width: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rank-movement-up {
+  color: #7cff9e;
+}
+
+.rank-movement-down {
+  color: #ff8a8a;
+}
+
+.rank-movement-neutral {
+  color: #8ca29b;
+}
+
 @keyframes flashGreen {
   0% {
     background-color: rgba(0, 255, 0, 0.2);

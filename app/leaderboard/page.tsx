@@ -36,6 +36,7 @@ type RowHighlight = {
 
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
+  const [prevEntries, setPrevEntries] = useState<LeaderboardEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [rowHighlights, setRowHighlights] = useState<Record<string, RowHighlight>>({});
@@ -113,6 +114,7 @@ export default function LeaderboardPage() {
         }
 
         setData(payload);
+        setPrevEntries(payload.entries);
         prevEntriesRef.current = payload.entries;
         setError(null);
         setLastUpdatedAt(new Date());
@@ -136,6 +138,10 @@ export default function LeaderboardPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    prevEntriesRef.current = prevEntries;
+  }, [prevEntries]);
 
   function buildDisplayedRanks(entries: LeaderboardEntry[]) {
     const scoreGroups = new Map<number, { rank: number; count: number }>();
@@ -170,6 +176,30 @@ export default function LeaderboardPage() {
   }
 
   const displayedRanks = data?.isVisible ? buildDisplayedRanks(data.entries) : null;
+  const prevRanksByUser = prevEntries
+    ? new Map(prevEntries.map((entry) => [entry.userId, entry.rankingPosition]))
+    : null;
+
+  function getRankMovement(entry: LeaderboardEntry) {
+    if (!prevRanksByUser) {
+      return null;
+    }
+
+    const previousRank = prevRanksByUser.get(entry.userId);
+    if (previousRank === undefined) {
+      return null;
+    }
+
+    if (entry.rankingPosition < previousRank) {
+      return <span className="rank-movement rank-movement-up">↑</span>;
+    }
+
+    if (entry.rankingPosition > previousRank) {
+      return <span className="rank-movement rank-movement-down">↓</span>;
+    }
+
+    return <span className="rank-movement rank-movement-neutral">—</span>;
+  }
 
   return (
     <main>
@@ -208,7 +238,12 @@ export default function LeaderboardPage() {
 
                   return (
                     <tr key={entry.userId} className={rowClasses || undefined}>
-                      <td>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</td>
+                      <td>
+                        <span className="rank-with-movement">
+                          <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
+                          {getRankMovement(entry)}
+                        </span>
+                      </td>
                       <td>{entry.playerFullName}</td>
                       <td>{entry.teamName}</td>
                       <td>
