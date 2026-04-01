@@ -817,7 +817,7 @@ export default function AdminPage() {
         </div>
 
         {status ? (
-          <div className="tier-panel">
+          <div className="tier-panel admin-panel">
             <h3>Draft Status</h3>
             <p>
               <strong>Current effective status:</strong> <code>{statusLabel}</code>
@@ -855,10 +855,10 @@ export default function AdminPage() {
 
         {!loading ? (
           <>
-            <div className="tier-panel">
+            <div className="tier-panel admin-panel">
               <h3>Admin Team Entry</h3>
               <p>Create or edit a registered user team directly from admin, including approved users not yet registered.</p>
-              <div className="nav-row">
+              <div className="nav-row admin-options">
                 <label>
                   <input
                     type="radio"
@@ -1034,10 +1034,10 @@ export default function AdminPage() {
               </form>
             </div>
 
-            <div className="tier-panel">
+            <div className="tier-panel admin-panel">
               <h3>Approved Users</h3>
               <p>Add, import, and remove approved users used by the join flow.</p>
-              <div className="tier-row">
+              <div className="admin-inline-row">
                 <input
                   placeholder="First Name"
                   value={firstName}
@@ -1091,7 +1091,7 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="tier-panel">
+            <div className="tier-panel admin-panel">
               <h3>Bulk Tier Import</h3>
               <p>Paste structured text, JSON, or CSV-like rows (tier_number, golfer_name, odds), then replace all tiers.</p>
               <textarea
@@ -1112,7 +1112,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="tier-panel">
+            <div className="tier-panel admin-panel">
               <h3>Scoring Import</h3>
               <p>
                 Admin-only scoring import. Paste JSON or CSV-like rows in either supported order:
@@ -1139,7 +1139,7 @@ export default function AdminPage() {
 
             <form onSubmit={onSave} className="stack-form">
               {tierNumbers.map((tierNumber) => (
-                <div className="tier-panel" key={tierNumber}>
+                <div className="tier-panel admin-panel" key={tierNumber}>
                   <h3>Tier {tierNumber}</h3>
                   {rowsByTier.get(tierNumber)?.map((row) => (
                     <div className="tier-row" key={row.localId}>

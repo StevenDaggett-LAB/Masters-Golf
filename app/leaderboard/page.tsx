@@ -259,79 +259,152 @@ export default function LeaderboardPage() {
         {data && !data.isVisible ? <p>Teams will be revealed after the draft locks.</p> : null}
 
         {data && data.isVisible ? (
-          <div className="leaderboard-table-wrap">
-            <table className="leaderboard-table">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Player</th>
-                  <th>Team</th>
-                  <th>Golfers</th>
-                  <th>Total</th>
-                  <th>Tiebreaker</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.entries.map((entry) => {
-                  const highlight = rowHighlights[entry.userId];
-                  const rowClasses = [
-                    entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null,
-                    highlight?.movedUp ? 'row-up' : null,
-                    highlight?.movedDown ? 'row-down' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' ');
+          <div className="leaderboard-content">
+            <div className="leaderboard-table-wrap">
+              <table className="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Team</th>
+                    <th>Golfers</th>
+                    <th>Total</th>
+                    <th>Tiebreaker</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.entries.map((entry) => {
+                    const highlight = rowHighlights[entry.userId];
+                    const rowClasses = [
+                      entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null,
+                      highlight?.movedUp ? 'row-up' : null,
+                      highlight?.movedDown ? 'row-down' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
 
-                  return (
-                    <tr key={entry.userId} className={rowClasses || undefined}>
-                      <td>
-                        <span className="rank-with-movement">
-                          <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
-                          {getRankMovement(entry)}
-                        </span>
-                      </td>
-                      <td>{entry.playerFullName}</td>
-                      <td>{entry.teamName}</td>
-                      <td>
-                        <ul className="leaderboard-golfers">
-                          {entry.selectedGolfers.map((golfer) => {
-                            const statusLine = getGolferStatusLine(golfer);
-                            const golferKey = `${entry.userId}-${golfer.golferName}`;
-                            const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
-                              ? 'leaderboard-golfer-row score-updated'
-                              : 'leaderboard-golfer-row';
+                    return (
+                      <tr key={entry.userId} className={rowClasses || undefined}>
+                        <td>
+                          <span className="rank-with-movement">
+                            <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
+                            {getRankMovement(entry)}
+                          </span>
+                        </td>
+                        <td>{entry.playerFullName}</td>
+                        <td>{entry.teamName}</td>
+                        <td>
+                          <ul className="leaderboard-golfers">
+                            {entry.selectedGolfers.map((golfer) => {
+                              const statusLine = getGolferStatusLine(golfer);
+                              const golferKey = `${entry.userId}-${golfer.golferName}`;
+                              const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
+                                ? 'leaderboard-golfer-row score-updated'
+                                : 'leaderboard-golfer-row';
 
-                            return (
-                              <li key={golferKey} className={golferRowClass}>
-                                <span className="leaderboard-golfer-main">
-                                  <span className="leaderboard-golfer-name">{golfer.golferName}</span>
-                                  <span className="leaderboard-golfer-score">
-                                    {formatRelativeToPar(golfer.tournamentScore)}
+                              return (
+                                <li key={golferKey} className={golferRowClass}>
+                                  <span className="leaderboard-golfer-main">
+                                    <span className="leaderboard-golfer-name">{golfer.golferName}</span>
+                                    <span className="leaderboard-golfer-score">
+                                      {formatRelativeToPar(golfer.tournamentScore)}
+                                    </span>
                                   </span>
-                                </span>
-                                {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </td>
-                      <td
+                                  {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </td>
+                        <td
+                          className={[
+                            highlight?.scoreImproved ? 'score-up' : null,
+                            highlight?.scoreWorsened ? 'score-down' : null,
+                            scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' ') || undefined}
+                        >
+                          {formatRelativeToPar(entry.teamTotalScore)}
+                        </td>
+                        <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="leaderboard-mobile-cards">
+              {data.entries.map((entry) => {
+                const highlight = rowHighlights[entry.userId];
+                const cardClasses = [
+                  'leaderboard-mobile-card',
+                  entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null,
+                  highlight?.movedUp ? 'row-up' : null,
+                  highlight?.movedDown ? 'row-down' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+
+                return (
+                  <article key={`mobile-${entry.userId}`} className={cardClasses}>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Rank:</strong>{' '}
+                      <span className="rank-with-movement">
+                        <span>{displayedRanks?.get(entry.userId) ?? entry.rankingPosition}</span>
+                        {getRankMovement(entry)}
+                      </span>
+                    </p>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Player:</strong> {entry.playerFullName}
+                    </p>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Team:</strong> {entry.teamName}
+                    </p>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Total:</strong>{' '}
+                      <span
                         className={[
+                          'leaderboard-mobile-total',
                           highlight?.scoreImproved ? 'score-up' : null,
                           highlight?.scoreWorsened ? 'score-down' : null,
                           scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
                         ]
                           .filter(Boolean)
-                          .join(' ') || undefined}
+                          .join(' ')}
                       >
                         {formatRelativeToPar(entry.teamTotalScore)}
-                      </td>
-                      <td>{entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </span>
+                    </p>
+                    <p className="leaderboard-mobile-meta">
+                      <strong>Tiebreaker:</strong> {entry.tiebreakerApplied ? `Sunday birdies: ${entry.sundayBirdies}` : '—'}
+                    </p>
+                    <div>
+                      <strong>Golfers</strong>
+                      <ul className="leaderboard-golfers">
+                        {entry.selectedGolfers.map((golfer) => {
+                          const statusLine = getGolferStatusLine(golfer);
+                          const golferKey = `${entry.userId}-${golfer.golferName}`;
+                          const golferRowClass = scoreUpdateHighlights.golferRows[golferKey]
+                            ? 'leaderboard-golfer-row score-updated'
+                            : 'leaderboard-golfer-row';
+
+                          return (
+                            <li key={`mobile-${golferKey}`} className={golferRowClass}>
+                              <span className="leaderboard-golfer-main">
+                                <span className="leaderboard-golfer-name">{golfer.golferName}</span>
+                                <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
+                              </span>
+                              {statusLine ? <span className="leaderboard-golfer-status">{statusLine}</span> : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         ) : null}
 

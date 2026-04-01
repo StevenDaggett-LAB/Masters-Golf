@@ -146,6 +146,10 @@ select:focus {
   padding: 0.75rem;
 }
 
+.admin-panel {
+  margin-top: 1rem;
+}
+
 .tier-panel h3 {
   margin: 0 0 0.6rem;
   font-size: 1rem;
@@ -158,6 +162,22 @@ select:focus {
   margin-bottom: 0.5rem;
 }
 
+.admin-inline-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.admin-options {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.admin-options label {
+  margin: 0;
+}
+
 .button-small {
   padding: 0.55rem 0.7rem;
   font-size: 0.82rem;
@@ -165,6 +185,10 @@ select:focus {
 
 .leaderboard-table-wrap {
   overflow-x: auto;
+}
+
+.leaderboard-mobile-cards {
+  display: none;
 }
 
 .leaderboard-table {
@@ -298,9 +322,53 @@ select:focus {
 @media (max-width: 640px) {
   .card {
     padding: 1.2rem;
+    width: min(98vw, 560px);
   }
 
   .tier-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-inline-row {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-row .button {
+    width: 100%;
+  }
+
+  .leaderboard-table-wrap {
+    display: none;
+  }
+
+  .leaderboard-mobile-cards {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .leaderboard-mobile-card {
+    border: 1px solid #2a5b3b;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .leaderboard-mobile-meta {
+    margin: 0;
+  }
+
+  .leaderboard-mobile-total {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .leaderboard-golfer-name {
+    white-space: normal;
   }
 }
