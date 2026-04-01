@@ -291,6 +291,7 @@ export default function AdminPage() {
   const [importText, setImportText] = useState('');
   const [scoreImportText, setScoreImportText] = useState('');
   const [importingScores, setImportingScores] = useState(false);
+  const [resettingTournament, setResettingTournament] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
   const [approvedUsersWithoutRegistration, setApprovedUsersWithoutRegistration] = useState<ApprovedUser[]>([]);
@@ -799,6 +800,45 @@ export default function AdminPage() {
     }
   }
 
+  async function onResetTournament() {
+    setError(null);
+    setSuccess(null);
+
+    const confirmed = window.confirm(
+      'This will delete all registered teams and golfer scores, then reopen the draft. Continue?',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const typedConfirmation = window.prompt('Type RESET to confirm tournament reset.');
+    if (typedConfirmation !== 'RESET') {
+      setError('Tournament reset cancelled. You must type RESET exactly.');
+      return;
+    }
+
+    setResettingTournament(true);
+    try {
+      const response = await fetch('/api/admin/reset', { method: 'POST' });
+      const data = (await response.json()) as LobbyStatus & { success?: boolean; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to reset tournament data.');
+      }
+
+      setStatus(data);
+      await loadTiersAndStatus();
+      setSelectedUserId('');
+      setSelectedUser(null);
+      setSelectedUserTeam(null);
+      setAdminTeamSelection(blankTeamSelection);
+      setSuccess('Tournament reset complete. Teams and golfer scores were cleared, and draft is open.');
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : 'Failed to reset tournament data.');
+    } finally {
+      setResettingTournament(false);
+    }
+  }
+
   const statusLabel =
     status?.status === 'open'
       ? 'open'
@@ -1108,6 +1148,21 @@ export default function AdminPage() {
                   disabled={importing}
                 >
                   {importing ? 'Replacing…' : 'Replace All Tiers'}
+                </button>
+              </div>
+            </div>
+
+            <div className="tier-panel admin-panel">
+              <h3>Reset Tournament</h3>
+              <p>Reset for a new season by clearing registered teams and golfer scores while keeping approved users and tiers.</p>
+              <div className="nav-row">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={onResetTournament}
+                  disabled={resettingTournament}
+                >
+                  {resettingTournament ? 'Resetting…' : 'Reset Tournament Data'}
                 </button>
               </div>
             </div>
