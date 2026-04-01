@@ -374,10 +374,36 @@ select:focus {
 }
 
 .landing-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
   background:
     radial-gradient(circle at 12% 14%, rgba(120, 173, 129, 0.18), transparent 42%),
     radial-gradient(circle at 85% 18%, rgba(198, 165, 90, 0.12), transparent 35%),
     linear-gradient(165deg, #0a2415 0%, #113420 55%, #0b1f14 100%);
+}
+
+.landing-logo-wrap {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.landing-logo-loaded {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.landing-logo-mark {
+  margin: 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: clamp(1.5rem, 3.6vw, 2rem);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #f0e4bf;
+  text-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
 .landing-card {
@@ -446,4 +472,10 @@ select:focus {
 
 .landing-theme-button:hover {
   background: rgba(14, 39, 25, 0.95);
+}
+
+.landing-theme-button-active {
+  background: linear-gradient(145deg, #355f3f, #21452d);
+  border-color: #82b48f;
+  box-shadow: inset 0 0 0 1px rgba(223, 244, 215, 0.2), 0 8px 18px rgba(0, 0, 0, 0.25);
 }
