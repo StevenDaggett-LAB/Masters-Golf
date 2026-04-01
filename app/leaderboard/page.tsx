@@ -198,7 +198,7 @@ export default function LeaderboardPage() {
       return <span className="rank-movement rank-movement-down">↓</span>;
     }
 
-    return <span className="rank-movement rank-movement-neutral">—</span>;
+    return null;
   }
 
   return (

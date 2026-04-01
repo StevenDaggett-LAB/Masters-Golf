@@ -239,10 +239,6 @@ select:focus {
   color: #ff8a8a;
 }
 
-.rank-movement-neutral {
-  color: #8ca29b;
-}
-
 @keyframes flashGreen {
   0% {
     background-color: rgba(0, 255, 0, 0.2);
