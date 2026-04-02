@@ -183,22 +183,66 @@ select:focus {
   font-size: 0.82rem;
 }
 
-.leaderboard-table-wrap {
-  overflow-x: auto;
+.pool-board-frame {
   border: 1px solid #355f44;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(13, 35, 22, 0.95), rgba(11, 28, 19, 0.97));
+  overflow: hidden;
 }
 
-.leaderboard-mobile-cards {
+.pool-board-label-row {
+  display: grid;
+  grid-template-columns: 70px minmax(120px, 1fr) minmax(110px, 1fr) 72px 84px 78px minmax(130px, 1fr);
+  gap: 0.35rem;
+  padding: 0.5rem;
+  background: linear-gradient(180deg, rgba(43, 88, 59, 0.9), rgba(31, 68, 45, 0.9));
+  color: #eaf3ec;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.pool-board-list {
+  display: grid;
+}
+
+.pool-board-entry {
+  border-top: 1px solid rgba(72, 119, 86, 0.45);
+  transition: background-color 0.35s ease;
+}
+
+.pool-board-entry:first-child {
+  border-top: 0;
+}
+
+.pool-board-entry-summary {
+  display: grid;
+  grid-template-columns: 70px minmax(120px, 1fr) minmax(110px, 1fr) 72px 84px 78px minmax(130px, 1fr);
+  gap: 0.35rem;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid rgba(72, 119, 86, 0.35);
+}
+
+.pool-summary-cell {
+  margin: 0;
+  display: grid;
+  gap: 0.08rem;
+  align-content: start;
+  font-size: 0.82rem;
+}
+
+.pool-summary-rank,
+.leaderboard-team-total {
+  font-variant-numeric: tabular-nums;
+}
+
+.pool-mobile-label {
   display: none;
-}
-
-.leaderboard-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
-  table-layout: fixed;
+  color: #90a898;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .leaderboard-meta-line {
@@ -209,44 +253,12 @@ select:focus {
   text-transform: uppercase;
 }
 
-.leaderboard-table thead th {
-  background: linear-gradient(180deg, rgba(43, 88, 59, 0.9), rgba(31, 68, 45, 0.9));
-  color: #eaf3ec;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  border-bottom: 1px solid #4d7a5d;
-}
-
-.leaderboard-table th,
-.leaderboard-table td {
-  border-bottom: 1px solid #29553a;
-  border-right: 1px solid rgba(72, 119, 86, 0.35);
-  padding: 0.4rem 0.45rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.leaderboard-table th:last-child,
-.leaderboard-table td:last-child {
-  border-right: 0;
-}
-
 .leaderboard-leader-row {
   background: linear-gradient(90deg, rgba(98, 173, 108, 0.2), rgba(24, 56, 36, 0.45));
 }
 
-.leaderboard-leader-row td:first-child {
+.leaderboard-leader-row .pool-summary-rank {
   font-weight: 700;
-}
-
-.leaderboard-table tr {
-  transition: background-color 0.35s ease;
-}
-
-.leaderboard-table tbody tr {
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .leaderboard-team-rank,
@@ -271,16 +283,11 @@ select:focus {
   animation: flashRed 1.5s ease;
 }
 
-.leaderboard-table td.score-up,
-.leaderboard-table td.score-down {
-  transition: color 0.35s ease;
-}
-
-.leaderboard-table td.score-up {
+.score-up {
   color: #7cff9e;
 }
 
-.leaderboard-table td.score-down {
+.score-down {
   color: #ff8a8a;
 }
 
@@ -339,9 +346,9 @@ select:focus {
   border-bottom: 0;
 }
 
-.leaderboard-golfer-detail-row td {
+.leaderboard-golfer-detail-row {
   background: rgba(7, 22, 14, 0.55);
-  padding: 0.3rem 0.45rem 0.4rem;
+  padding: 0.3rem 0.5rem 0.4rem;
 }
 
 .score-updated {
@@ -411,35 +418,21 @@ select:focus {
     width: 100%;
   }
 
-  .leaderboard-table-wrap {
+  .pool-board-label-row {
     display: none;
   }
 
-  .leaderboard-mobile-cards {
-    display: grid;
-    gap: 0.75rem;
+  .pool-board-entry {
+    border-top: 1px solid rgba(72, 119, 86, 0.45);
   }
 
-  .leaderboard-mobile-card {
-    border: 1px solid #3c6b4c;
-    border-radius: 10px;
-    padding: 0.65rem;
-    display: grid;
-    gap: 0.35rem;
-    background: linear-gradient(180deg, rgba(14, 37, 24, 0.93), rgba(8, 22, 14, 0.94));
+  .pool-board-entry-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.6rem;
   }
 
-  .leaderboard-mobile-meta {
-    margin: 0;
-  }
-
-  .leaderboard-mobile-total {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .leaderboard-golfer-detail-mobile-head {
-    margin-top: 0.25rem;
+  .pool-mobile-label {
+    display: inline;
   }
 
   .leaderboard-golfer-name {
