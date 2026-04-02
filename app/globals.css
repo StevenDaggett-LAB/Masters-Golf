@@ -192,7 +192,7 @@ select:focus {
 
 .pool-board-label-row {
   display: grid;
-  grid-template-columns: 70px minmax(120px, 1fr) minmax(110px, 1fr) 72px 84px 78px minmax(130px, 1fr);
+  grid-template-columns: 70px minmax(140px, 1fr) minmax(140px, 1fr) 86px;
   gap: 0.35rem;
   padding: 0.5rem;
   background: linear-gradient(180deg, rgba(43, 88, 59, 0.9), rgba(31, 68, 45, 0.9));
@@ -218,10 +218,24 @@ select:focus {
 
 .pool-board-entry-summary {
   display: grid;
-  grid-template-columns: 70px minmax(120px, 1fr) minmax(110px, 1fr) 72px 84px 78px minmax(130px, 1fr);
+  grid-template-columns: 70px minmax(140px, 1fr) minmax(140px, 1fr) 86px;
   gap: 0.35rem;
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid rgba(72, 119, 86, 0.35);
+}
+
+
+.pool-board-label-row-teams {
+  grid-template-columns: 70px minmax(140px, 1fr) minmax(140px, 1fr) 86px;
+}
+
+.pool-board-entry-summary-teams {
+  grid-template-columns: 70px minmax(140px, 1fr) minmax(140px, 1fr) 86px;
+}
+
+.leaderboard-golfer-detail-head-teams,
+.leaderboard-golfer-detail-grid-teams {
+  grid-template-columns: minmax(0, 2fr) 60px minmax(0, 1.15fr);
 }
 
 .pool-summary-cell {
@@ -270,8 +284,7 @@ select:focus {
 
 .leaderboard-team-rank,
 .leaderboard-team-total,
-.leaderboard-golfer-score,
-.leaderboard-golfer-round {
+.leaderboard-golfer-score {
   font-variant-numeric: tabular-nums;
 }
 
@@ -358,7 +371,7 @@ select:focus {
 
 .leaderboard-golfer-detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) 60px minmax(0, 1.15fr) 55px;
+  grid-template-columns: minmax(0, 2fr) 60px minmax(0, 1.15fr);
   gap: 0.45rem;
   align-items: baseline;
   padding: 0.22rem 0;
@@ -376,12 +389,6 @@ select:focus {
 
 .leaderboard-golfer-status {
   color: #aab6ad;
-  font-size: 0.75rem;
-}
-
-.leaderboard-golfer-round {
-  text-align: right;
-  font-weight: 700;
   font-size: 0.75rem;
 }
 
@@ -431,6 +438,15 @@ select:focus {
     gap: 0.45rem 0.6rem;
   }
 
+
+  .pool-board-entry-summary-teams {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leaderboard-golfer-detail-grid-teams {
+    grid-template-columns: minmax(0, 1.9fr) 52px minmax(0, 1fr);
+  }
+
   .pool-mobile-label {
     display: inline;
   }
@@ -440,7 +456,7 @@ select:focus {
   }
 
   .leaderboard-golfer-detail-grid {
-    grid-template-columns: minmax(0, 1.9fr) 52px minmax(0, 1fr) 45px;
+    grid-template-columns: minmax(0, 1.9fr) 52px minmax(0, 1fr);
     gap: 0.35rem;
   }
 }
