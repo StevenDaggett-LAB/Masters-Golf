@@ -20,6 +20,12 @@ type LeaderboardEntry = {
   tiebreakerApplied: boolean;
 };
 
+type TeamThruSummary = {
+  finished: number;
+  active: number;
+  notStarted: number;
+};
+
 type LeaderboardResponse = {
   isVisible: boolean;
   hardLockTimeUtc: string;
@@ -227,6 +233,73 @@ export default function LeaderboardPage() {
     return null;
   }
 
+  function getRelativeScoreClass(score: number | null) {
+    if (score === null) {
+      return null;
+    }
+
+    if (score < 0) {
+      return 'score-good';
+    }
+
+    if (score > 0) {
+      return 'score-bad';
+    }
+
+    return 'score-even';
+  }
+
+  function formatTeamToday(entry: LeaderboardEntry) {
+    const availableRoundScores = entry.selectedGolfers
+      .map((golfer) => golfer.currentRoundScore)
+      .filter((score): score is number => score !== null);
+
+    if (availableRoundScores.length === 0) {
+      return { label: '—', value: null as number | null };
+    }
+
+    const todayTotal = availableRoundScores.reduce((sum, score) => sum + score, 0);
+    return { label: formatRelativeToPar(todayTotal), value: todayTotal };
+  }
+
+  function buildTeamThruSummary(entry: LeaderboardEntry): TeamThruSummary {
+    return entry.selectedGolfers.reduce<TeamThruSummary>(
+      (summary, golfer) => {
+        const status = golfer.statusText?.trim().toUpperCase() ?? '';
+
+        if (!status) {
+          summary.notStarted += 1;
+          return summary;
+        }
+
+        if (
+          status === 'F' ||
+          status.startsWith('F*') ||
+          status.startsWith('WD') ||
+          status.startsWith('DQ') ||
+          status.startsWith('MDF') ||
+          status.startsWith('CUT')
+        ) {
+          summary.finished += 1;
+          return summary;
+        }
+
+        if (status.includes(':') || status.includes('AM') || status.includes('PM') || status.includes('TBD')) {
+          summary.notStarted += 1;
+          return summary;
+        }
+
+        summary.active += 1;
+        return summary;
+      },
+      { finished: 0, active: 0, notStarted: 0 },
+    );
+  }
+
+  function formatTeamThru(summary: TeamThruSummary) {
+    return `${summary.finished}F/${summary.active}A/${summary.notStarted}NS`;
+  }
+
   return (
     <main>
       <section className="card">
@@ -245,11 +318,16 @@ export default function LeaderboardPage() {
                 <span>Rank</span>
                 <span>Player</span>
                 <span>Team</span>
+                <span>Today</span>
+                <span>Thru</span>
                 <span>Total</span>
               </div>
               <div className="pool-board-list">
                 {data.entries.map((entry) => {
                   const highlight = rowHighlights[entry.userId];
+                  const teamToday = formatTeamToday(entry);
+                  const teamThruSummary = buildTeamThruSummary(entry);
+                  const teamThruLabel = formatTeamThru(teamThruSummary);
                   const entryClasses = [
                     'pool-board-entry',
                     entry.rankingPosition === 1 ? 'leaderboard-leader-row' : null,
@@ -280,10 +358,27 @@ export default function LeaderboardPage() {
                         <p
                           className={[
                             'pool-summary-cell',
+                            'leaderboard-team-today',
+                            getRelativeScoreClass(teamToday.value),
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          <span className="pool-mobile-label">Today</span>
+                          <span>{teamToday.label}</span>
+                        </p>
+                        <p className="pool-summary-cell leaderboard-team-thru">
+                          <span className="pool-mobile-label">Thru</span>
+                          <span>{teamThruLabel}</span>
+                        </p>
+                        <p
+                          className={[
+                            'pool-summary-cell',
                             'leaderboard-team-total',
                             highlight?.scoreImproved ? 'score-up' : null,
                             highlight?.scoreWorsened ? 'score-down' : null,
                             scoreUpdateHighlights.teamTotals[entry.userId] ? 'score-updated' : null,
+                            getRelativeScoreClass(entry.teamTotalScore),
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -297,6 +392,7 @@ export default function LeaderboardPage() {
                           <span>Golfer</span>
                           <span>Score</span>
                           <span>Status</span>
+                          <span>RND</span>
                         </div>
                         <ul className="leaderboard-golfers">
                           {entry.selectedGolfers.map((golfer) => {
@@ -309,13 +405,35 @@ export default function LeaderboardPage() {
                               <li key={golferKey} className={golferRowClass}>
                                 <span className="leaderboard-golfer-detail-grid leaderboard-golfer-detail-grid-teams">
                                   <span className="leaderboard-golfer-name">{golfer.golferName}</span>
-                                  <span className="leaderboard-golfer-score">{formatRelativeToPar(golfer.tournamentScore)}</span>
+                                  <span
+                                    className={[
+                                      'leaderboard-golfer-score',
+                                      getRelativeScoreClass(golfer.tournamentScore),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                  >
+                                    {formatRelativeToPar(golfer.tournamentScore)}
+                                  </span>
                                   <span className="leaderboard-golfer-status">{golfer.statusText?.trim() || '—'}</span>
+                                  <span
+                                    className={[
+                                      'leaderboard-golfer-round',
+                                      getRelativeScoreClass(golfer.currentRoundScore),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                  >
+                                    {golfer.currentRoundScore === null ? '—' : formatRelativeToPar(golfer.currentRoundScore)}
+                                  </span>
                                 </span>
                               </li>
                             );
                           })}
                         </ul>
+                        {entry.tiebreakerApplied ? (
+                          <p className="leaderboard-tiebreaker-note">Tiebreak: Sunday birdies {entry.sundayBirdies}</p>
+                        ) : null}
                       </div>
                     </article>
                   );
