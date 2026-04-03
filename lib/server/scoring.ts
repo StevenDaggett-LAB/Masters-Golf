@@ -40,6 +40,12 @@ type TeamRow = {
   picks: TeamPicks;
 };
 
+type ScoredTeam = TeamRow & {
+  selectedGolfers: LeaderboardGolferBreakdown[];
+  teamTotalScore: number;
+  sundayBirdies: number;
+};
+
 const inMemoryScores = new Map<string, GolferScoreRecord>();
 function hasSupabaseConfig() {
   return Boolean(env.supabaseUrl && env.supabaseServiceRoleKey);
@@ -120,6 +126,18 @@ function calculateGolferEffectiveTotal(record: GolferScoreRecord, highs: Record<
   }
 
   return relativeScore + highs[3] + highs[4];
+}
+
+function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
+  if (a.teamTotalScore !== b.teamTotalScore) {
+    return a.teamTotalScore - b.teamTotalScore;
+  }
+
+  if (a.sundayBirdies !== b.sundayBirdies) {
+    return b.sundayBirdies - a.sundayBirdies;
+  }
+
+  return a.teamName.localeCompare(b.teamName);
 }
 
 async function loadSavedTeams(): Promise<TeamRow[]> {
@@ -260,7 +278,7 @@ export async function getLeaderboardData() {
   const scoreMap = new Map(scores.map((record) => [normalizeName(record.golferName), record]));
   const highs = computeRoundHighs(scores);
 
-  const scored = teams.map((team) => {
+  const scored: ScoredTeam[] = teams.map((team) => {
     const golferNames = [
       team.picks.tier1,
       team.picks.tier2,
@@ -307,17 +325,7 @@ export async function getLeaderboardData() {
     };
   });
 
-  scored.sort((a, b) => {
-    if (a.teamTotalScore !== b.teamTotalScore) {
-      return a.teamTotalScore - b.teamTotalScore;
-    }
-
-    if (a.sundayBirdies !== b.sundayBirdies) {
-      return b.sundayBirdies - a.sundayBirdies;
-    }
-
-    return a.teamName.localeCompare(b.teamName);
-  });
+  scored.sort(compareScoredTeams);
 
   const scoreGroupCounts = new Map<number, number>();
   for (const row of scored) {
