@@ -23,11 +23,6 @@ type LeaderboardEntry = {
   teamThruSummary?: string | null;
 };
 
-type TeamThruSummary = {
-  finished: number;
-  active: number;
-  notStarted: number;
-};
 
 type LeaderboardResponse = {
   isVisible: boolean;
