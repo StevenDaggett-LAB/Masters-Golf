@@ -28,23 +28,24 @@ function parseBoolean(value: unknown, fallback = true): boolean {
   return fallback;
 }
 
-function normalizeRecord(input: Record<string, unknown>) {
+function normalizeRecord(input: Record<string, unknown>): GolferScoreRecord | null {
   const golferName = String(input.golfer_name ?? input.golferName ?? '').trim();
   if (!golferName) return null;
 
-return {
-  golferName,
-  totalScore: toIntOrNull(input.total_score ?? input.totalScore) ?? 0,
-  madeCut: parseBoolean(input.made_cut ?? input.madeCut, true),
-  round1Score: toIntOrNull(input.round_1_score ?? input.round1Score) ?? null,
-  round2Score: toIntOrNull(input.round_2_score ?? input.round2Score) ?? null,
-  round3Score: toIntOrNull(input.round_3_score ?? input.round3Score) ?? null,
-  round4Score: toIntOrNull(input.round_4_score ?? input.round4Score) ?? null,
-  sundayBirdies: toIntOrNull(input.sunday_birdies ?? input.sundayBirdies) ?? 0,
-  statusText: (String(input.status_text ?? input.statusText ?? '').trim() || null) ?? null,
-  currentRoundScore:
-    toIntOrNull(input.current_round_score ?? input.currentRoundScore) ?? null,
-} satisfies GolferScoreRecord;}
+  return {
+    golferName,
+    totalScore: toIntOrNull(input.total_score ?? input.totalScore) ?? 0,
+    madeCut: parseBoolean(input.made_cut ?? input.madeCut, true),
+    round1Score: toIntOrNull(input.round_1_score ?? input.round1Score) ?? null,
+    round2Score: toIntOrNull(input.round_2_score ?? input.round2Score) ?? null,
+    round3Score: toIntOrNull(input.round_3_score ?? input.round3Score) ?? null,
+    round4Score: toIntOrNull(input.round_4_score ?? input.round4Score) ?? null,
+    sundayBirdies: toIntOrNull(input.sunday_birdies ?? input.sundayBirdies) ?? 0,
+    statusText: String(input.status_text ?? input.statusText ?? '').trim() || null,
+    currentRoundScore:
+      toIntOrNull(input.current_round_score ?? input.currentRoundScore) ?? null,
+  } satisfies GolferScoreRecord;
+}
 
 export async function POST(request: NextRequest) {
   if (!isAdmin(request)) {
@@ -54,12 +55,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as unknown;
     if (!Array.isArray(body)) {
-      return NextResponse.json({ error: 'Request body must be an array of score rows.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Request body must be an array of score rows.' },
+        { status: 400 },
+      );
     }
 
     const rows = body;
     const records = rows
-      .map((row) => (typeof row === 'object' && row ? normalizeRecord(row as Record<string, unknown>) : null))
+      .map((row) =>
+        typeof row === 'object' && row
+          ? normalizeRecord(row as Record<string, unknown>)
+          : null,
+      )
       .filter((row): row is GolferScoreRecord => row !== null);
 
     if (records.length === 0) {
