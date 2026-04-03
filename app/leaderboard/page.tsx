@@ -51,138 +51,37 @@ export default function LeaderboardPage() {
 const [data, setData] = useState<LeaderboardResponse | null>(null);
 const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+useEffect(() => {
+  let cancelled = false;
 
-    async function loadLeaderboard() {
-      try {
-        const response = await fetch('/api/leaderboard', { cache: 'no-store' });
-        const payload = (await response.json()) as LeaderboardResponse;
+  async function loadLeaderboard() {
+    try {
+      const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+      const payload = (await response.json()) as LeaderboardResponse;
 
-        if (!response.ok) {
-          throw new Error(payload.error ?? 'Failed to load leaderboard.');
-        }
-
-        if (!cancelled) {
-          setData(payload);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load leaderboard.');
-        }
-      }
-    }
-
-    void loadLeaderboard();
-    const interval = window.setInterval(loadLeaderboard, 30000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, []);
-
-
-
-  function buildDisplayedRanks(entries: LeaderboardEntry[]) {
-    const scoreGroups = new Map<number, { rank: number; count: number }>();
-    const displayedRanks = new Map<string, string>();
-
-    entries.forEach((entry, index) => {
-      const existingGroup = scoreGroups.get(entry.teamTotalScore);
-
-      if (existingGroup) {
-        scoreGroups.set(entry.teamTotalScore, {
-          rank: existingGroup.rank,
-          count: existingGroup.count + 1,
-        });
-        return;
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Failed to load leaderboard.');
       }
 
-      scoreGroups.set(entry.teamTotalScore, { rank: index + 1, count: 1 });
-    });
-
-    entries.forEach((entry) => {
-      const group = scoreGroups.get(entry.teamTotalScore);
-      const rankLabel = !group
-        ? `${entry.rankingPosition}`
-        : group.count > 1
-          ? `T${group.rank}`
-          : `${group.rank}`;
-
-      displayedRanks.set(entry.userId, rankLabel);
-    });
-
-    return displayedRanks;
+      if (!cancelled) {
+        setData(payload);
+        setError(null);
+      }
+    } catch (err) {
+      if (!cancelled) {
+        setError(err instanceof Error ? err.message : 'Failed to load leaderboard.');
+      }
+    }
   }
 
-  const displayedRanks = data?.isVisible ? buildDisplayedRanks(data.entries) : null;
+  void loadLeaderboard();
+  const interval = window.setInterval(loadLeaderboard, 30000);
 
-
-  function getRelativeScoreClass(score: number | null) {
-    if (score === null) {
-      return null;
-    }
-
-    if (score < 0) {
-      return 'score-good';
-    }
-
-    if (score > 0) {
-      return 'score-bad';
-    }
-
-    return 'score-even';
-  }
-
-  function formatTeamToday(entry: LeaderboardEntry) {
-    const availableRoundScores = entry.selectedGolfers
-      .map((golfer) => golfer.currentRoundScore)
-      .filter((score): score is number => score !== null);
-
-    if (availableRoundScores.length === 0) {
-      return { label: '—', value: null as number | null };
-    }
-
-    const todayTotal = availableRoundScores.reduce((sum, score) => sum + score, 0);
-return { label: formatRelative(todayTotal), value: todayTotal };
-  }
-
-  function buildTeamThruSummary(entry: LeaderboardEntry): TeamThruSummary {
-    return entry.selectedGolfers.reduce<TeamThruSummary>(
-      (summary, golfer) => {
-        const status = golfer.statusText?.trim().toUpperCase() ?? '';
-
-        if (!status) {
-          summary.notStarted += 1;
-          return summary;
-        }
-
-        if (
-          status === 'F' ||
-          status.startsWith('F*') ||
-          status.startsWith('WD') ||
-          status.startsWith('DQ') ||
-          status.startsWith('MDF') ||
-          status.startsWith('CUT')
-        ) {
-          summary.finished += 1;
-          return summary;
-        }
-
-        if (status.includes(':') || status.includes('AM') || status.includes('PM') || status.includes('TBD')) {
-          summary.notStarted += 1;
-          return summary;
-        }
-
-        summary.active += 1;
-        return summary;
-      },
-      { finished: 0, active: 0, notStarted: 0 },
-    );
-  }
-
+  return () => {
+    cancelled = true;
+    window.clearInterval(interval);
+  };
+}, []);
   function formatTeamThru(summary: TeamThruSummary) {
     return `${summary.finished}F/${summary.active}A/${summary.notStarted}NS`;
   }
