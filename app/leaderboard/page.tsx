@@ -82,9 +82,6 @@ useEffect(() => {
     window.clearInterval(interval);
   };
 }, []);
-  function formatTeamThru(summary: TeamThruSummary) {
-    return `${summary.finished}F/${summary.active}A/${summary.notStarted}NS`;
-  }
 
 
 
