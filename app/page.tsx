@@ -96,11 +96,7 @@ export default function LandingPage() {
 
   return (
     <main className="landing-main">
-      <div className={`landing-logo-wrap ${isLoaded ? 'landing-logo-loaded' : ''}`}>
-        <p className="landing-logo-mark" aria-label="Masters Golf Pool logo">
-          Masters Golf Pool
-        </p>
-      </div>
+      <div className={`landing-logo-wrap ${isLoaded ? 'landing-logo-loaded' : ''}`}></div>
       <section className={`card landing-card ${isLoaded ? 'landing-card-loaded' : ''}`}>
         <p className="landing-kicker">Augusta Season</p>
         <h1>Masters Golf Pool</h1>
