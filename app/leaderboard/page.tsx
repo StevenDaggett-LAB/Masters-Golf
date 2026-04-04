@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type LeaderboardGolfer = {
   golferName: string;
@@ -45,6 +45,32 @@ function scoreClass(value: number | null | undefined) {
 export default function LeaderboardPage() {
 const [data, setData] = useState<LeaderboardResponse | null>(null);
 const [error, setError] = useState<string | null>(null);
+const previousRanksRef = useRef<Map<string, number> | null>(null);
+const [rankMovement, setRankMovement] = useState<Record<string, 'up' | 'down' | 'same'>>({});
+
+const nextMovement: Record<string, 'up' | 'down' | 'same'> = {};
+const previousRanks = previousRanksRef.current;
+
+for (const entry of payload.entries) {
+  const prev = previousRanks?.get(entry.userId);
+
+  if (prev === undefined) {
+    nextMovement[entry.userId] = 'same';
+  } else if (entry.rankingPosition < prev) {
+    nextMovement[entry.userId] = 'up';
+  } else if (entry.rankingPosition > prev) {
+    nextMovement[entry.userId] = 'down';
+  } else {
+    nextMovement[entry.userId] = 'same';
+  }
+}
+
+previousRanksRef.current = new Map(
+  payload.entries.map((e) => [e.userId, e.rankingPosition])
+);
+
+setRankMovement(nextMovement);
+setData(payload);
 
 useEffect(() => {
   let cancelled = false;
@@ -59,8 +85,29 @@ useEffect(() => {
       }
 
       if (!cancelled) {
-        setData(payload);
-        setError(null);
+        const nextMovement: Record<string, 'up' | 'down' | 'same'> = {};
+const previousRanks = previousRanksRef.current;
+
+for (const entry of payload.entries) {
+  const prev = previousRanks?.get(entry.userId);
+
+  if (prev === undefined) {
+    nextMovement[entry.userId] = 'same';
+  } else if (entry.rankingPosition < prev) {
+    nextMovement[entry.userId] = 'up';
+  } else if (entry.rankingPosition > prev) {
+    nextMovement[entry.userId] = 'down';
+  } else {
+    nextMovement[entry.userId] = 'same';
+  }
+}
+
+previousRanksRef.current = new Map(
+  payload.entries.map((e) => [e.userId, e.rankingPosition])
+);
+
+setRankMovement(nextMovement);
+setData(payload);
       }
     } catch (err) {
       if (!cancelled) {
@@ -118,7 +165,10 @@ useEffect(() => {
                 {data.entries.map((entry, index) => (
                   <tbody key={entry.userId}>
                     <tr className={index === 0 ? 'leader-row' : ''}>
-                      <td className="pos-cell">{entry.rankingPosition}</td>
+                      <td className="pos-cell">
+  {entry.rankingPosition}
+  {renderArrow(rankMovement[entry.userId])}
+</td>
                       <td className="player-name">{entry.playerFullName}</td>
                       <td className="team-name-cell">{entry.teamName}</td>
                       <td className={scoreClass(entry.teamTodayScore)}>
