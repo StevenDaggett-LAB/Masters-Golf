@@ -141,7 +141,7 @@ useEffect(() => {
                         <td className={scoreClass(golfer.currentRoundScore)}>
                           {formatRelative(golfer.currentRoundScore)}
                         </td>
-                        <td>{golfer.statusText ?? '—'}</td>
+                        <td>{entry.teamName}</td>
                         <td className={scoreClass(golfer.tournamentScore)}>
                           {formatRelative(golfer.tournamentScore)}
                         </td>
