@@ -9,7 +9,6 @@ type LeaderboardGolfer = {
   currentRoundScore: number | null;
 };
 
-
 type LeaderboardEntry = {
   userId: string;
   playerFullName: string;
@@ -23,13 +22,14 @@ type LeaderboardEntry = {
   teamThruSummary?: string | null;
 };
 
-
 type LeaderboardResponse = {
   isVisible: boolean;
   lastUpdated?: string | null;
   entries: LeaderboardEntry[];
   error?: string;
 };
+
+type LeaderboardViewMode = 'summary' | 'roster';
 
 function formatRelative(value: number | null | undefined) {
   if (value === null || value === undefined) return '—';
@@ -42,90 +42,75 @@ function scoreClass(value: number | null | undefined) {
   return value < 0 ? 'score-negative' : 'score-positive';
 }
 
+function renderArrow(movement: 'up' | 'down' | 'same' | undefined) {
+  if (movement === 'up') return <span className="rank-arrow rank-arrow-up">↑</span>;
+  if (movement === 'down') return <span className="rank-arrow rank-arrow-down">↓</span>;
+  return null;
+}
+
+function isNumericRank(value: number | string): value is number {
+  return typeof value === 'number';
+}
+
 export default function LeaderboardPage() {
-const [data, setData] = useState<LeaderboardResponse | null>(null);
-const [error, setError] = useState<string | null>(null);
-const previousRanksRef = useRef<Map<string, number> | null>(null);
-const [rankMovement, setRankMovement] = useState<Record<string, 'up' | 'down' | 'same'>>({});
+  const [data, setData] = useState<LeaderboardResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<LeaderboardViewMode>('summary');
+  const previousRanksRef = useRef<Map<string, number | string> | null>(null);
+  const [rankMovement, setRankMovement] = useState<Record<string, 'up' | 'down' | 'same'>>({});
 
-const nextMovement: Record<string, 'up' | 'down' | 'same'> = {};
-const previousRanks = previousRanksRef.current;
+  useEffect(() => {
+    let cancelled = false;
 
-for (const entry of payload.entries) {
-  const prev = previousRanks?.get(entry.userId);
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+        const payload = (await response.json()) as LeaderboardResponse;
 
-  if (prev === undefined) {
-    nextMovement[entry.userId] = 'same';
-  } else if (entry.rankingPosition < prev) {
-    nextMovement[entry.userId] = 'up';
-  } else if (entry.rankingPosition > prev) {
-    nextMovement[entry.userId] = 'down';
-  } else {
-    nextMovement[entry.userId] = 'same';
-  }
-}
+        if (!response.ok) {
+          throw new Error(payload.error ?? 'Failed to load leaderboard.');
+        }
 
-previousRanksRef.current = new Map(
-  payload.entries.map((e) => [e.userId, e.rankingPosition])
-);
+        if (!cancelled) {
+          const nextMovement: Record<string, 'up' | 'down' | 'same'> = {};
+          const previousRanks = previousRanksRef.current;
 
-setRankMovement(nextMovement);
-setData(payload);
+          for (const entry of payload.entries) {
+            const prev = previousRanks?.get(entry.userId);
 
-useEffect(() => {
-  let cancelled = false;
+            if (prev === undefined) {
+              nextMovement[entry.userId] = 'same';
+            } else if (isNumericRank(entry.rankingPosition) && isNumericRank(prev) && entry.rankingPosition < prev) {
+              nextMovement[entry.userId] = 'up';
+            } else if (isNumericRank(entry.rankingPosition) && isNumericRank(prev) && entry.rankingPosition > prev) {
+              nextMovement[entry.userId] = 'down';
+            } else {
+              nextMovement[entry.userId] = 'same';
+            }
+          }
 
-  async function loadLeaderboard() {
-    try {
-      const response = await fetch('/api/leaderboard', { cache: 'no-store' });
-      const payload = (await response.json()) as LeaderboardResponse;
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to load leaderboard.');
-      }
-
-      if (!cancelled) {
-        const nextMovement: Record<string, 'up' | 'down' | 'same'> = {};
-const previousRanks = previousRanksRef.current;
-
-for (const entry of payload.entries) {
-  const prev = previousRanks?.get(entry.userId);
-
-  if (prev === undefined) {
-    nextMovement[entry.userId] = 'same';
-  } else if (entry.rankingPosition < prev) {
-    nextMovement[entry.userId] = 'up';
-  } else if (entry.rankingPosition > prev) {
-    nextMovement[entry.userId] = 'down';
-  } else {
-    nextMovement[entry.userId] = 'same';
-  }
-}
-
-previousRanksRef.current = new Map(
-  payload.entries.map((e) => [e.userId, e.rankingPosition])
-);
-
-setRankMovement(nextMovement);
-setData(payload);
-      }
-    } catch (err) {
-      if (!cancelled) {
-        setError(err instanceof Error ? err.message : 'Failed to load leaderboard.');
+          previousRanksRef.current = new Map(payload.entries.map((e) => [e.userId, e.rankingPosition]));
+          setRankMovement(nextMovement);
+          setData(payload);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load leaderboard.');
+        }
       }
     }
-  }
 
-  void loadLeaderboard();
-  const interval = window.setInterval(loadLeaderboard, 30000);
+    void loadLeaderboard();
+    const interval = window.setInterval(loadLeaderboard, 30000);
 
-  return () => {
-    cancelled = true;
-    window.clearInterval(interval);
-  };
-}, []);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
-
+  const showRoster = viewMode === 'roster';
 
   return (
     <main className="leaderboard-page augusta-board-page">
@@ -134,13 +119,10 @@ setData(payload);
           <span className="augusta-board-title">2025 Masters Leaders</span>
         </div>
 
-
-        
         {!data && !error ? <div className="leaderboard-loading">Loading leaderboard...</div> : null}
         {error ? <div className="leaderboard-loading">{error}</div> : null}
         {data && !data.isVisible ? (
           <div className="leaderboard-loading">Teams will be revealed after the draft locks.</div>
-
         ) : null}
 
         {data && data.isVisible ? (
@@ -148,6 +130,23 @@ setData(payload);
             {data.lastUpdated ? (
               <div className="augusta-board-updated">Last updated: {data.lastUpdated}</div>
             ) : null}
+
+            <div className="leaderboard-view-toggle" role="group" aria-label="Leaderboard display mode">
+              <button
+                type="button"
+                className={`leaderboard-view-toggle-btn ${viewMode === 'summary' ? 'active' : ''}`}
+                onClick={() => setViewMode('summary')}
+              >
+                Show Team Summary Only
+              </button>
+              <button
+                type="button"
+                className={`leaderboard-view-toggle-btn ${viewMode === 'roster' ? 'active' : ''}`}
+                onClick={() => setViewMode('roster')}
+              >
+                Team with Roster
+              </button>
+            </div>
 
             <div className="leaderboard-table-wrap">
               <table className="leaderboard-table augusta-board-table">
@@ -157,7 +156,7 @@ setData(payload);
                     <th>PLAYER</th>
                     <th>TEAM</th>
                     <th>TODAY</th>
-                    <th>THRU</th>
+                    {showRoster ? <th>THRU</th> : null}
                     <th>TOTAL</th>
                   </tr>
                 </thead>
@@ -166,37 +165,32 @@ setData(payload);
                   <tbody key={entry.userId}>
                     <tr className={index === 0 ? 'leader-row' : ''}>
                       <td className="pos-cell">
-  {entry.rankingPosition}
-  {renderArrow(rankMovement[entry.userId])}
-</td>
+                        {entry.rankingPosition}
+                        {renderArrow(rankMovement[entry.userId])}
+                      </td>
                       <td className="player-name">{entry.playerFullName}</td>
                       <td className="team-name-cell">{entry.teamName}</td>
-                      <td className={scoreClass(entry.teamTodayScore)}>
-                        {formatRelative(entry.teamTodayScore)}
-                      </td>
-                      <td>{entry.teamThruSummary ?? '—'}</td>
-                      <td className={scoreClass(entry.teamTotalScore)}>
-                        {formatRelative(entry.teamTotalScore)}
-                      </td>
+                      <td className={scoreClass(entry.teamTodayScore)}>{formatRelative(entry.teamTodayScore)}</td>
+                      {showRoster ? <td>{entry.teamThruSummary ?? '—'}</td> : null}
+                      <td className={scoreClass(entry.teamTotalScore)}>{formatRelative(entry.teamTotalScore)}</td>
                     </tr>
 
-                    {entry.selectedGolfers.map((golfer) => (
-                      <tr
-                        key={`${entry.userId}-${golfer.golferName}`}
-                        className="golfer-detail-row"
-                      >
-                        <td></td>
-                        <td className="golfer-detail-name">{golfer.golferName}</td>
-                        <td></td>
-                        <td className={scoreClass(golfer.currentRoundScore)}>
-                          {formatRelative(golfer.currentRoundScore)}
-                        </td>
-                        <td className="golfer-detail-status">{golfer.statusText ?? '-'}</td>
-                        <td className={scoreClass(golfer.tournamentScore)}>
-                          {formatRelative(golfer.tournamentScore)}
-                        </td>
-                      </tr>
-                    ))}
+                    {showRoster
+                      ? entry.selectedGolfers.map((golfer) => (
+                          <tr key={`${entry.userId}-${golfer.golferName}`} className="golfer-detail-row">
+                            <td></td>
+                            <td className="golfer-detail-name">{golfer.golferName}</td>
+                            <td></td>
+                            <td className={scoreClass(golfer.currentRoundScore)}>
+                              {formatRelative(golfer.currentRoundScore)}
+                            </td>
+                            <td className="golfer-detail-status">{golfer.statusText ?? '-'}</td>
+                            <td className={scoreClass(golfer.tournamentScore)}>
+                              {formatRelative(golfer.tournamentScore)}
+                            </td>
+                          </tr>
+                        ))
+                      : null}
                   </tbody>
                 ))}
               </table>

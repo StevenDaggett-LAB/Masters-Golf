@@ -1004,3 +1004,46 @@ background: radial-gradient(circle at center, #0f3d2e, #06281d);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
+
+.leaderboard-view-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px 8px;
+}
+
+.leaderboard-view-toggle-btn {
+  border: 1px solid #b8b29d;
+  border-radius: 999px;
+  background: #f5f3e8;
+  color: #1d3b2f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.leaderboard-view-toggle-btn.active {
+  background: #1d5a40;
+  color: #fff;
+  border-color: #1d5a40;
+}
+
+.rank-arrow {
+  margin-left: 6px;
+  font-size: 0.8rem;
+}
+
+.rank-arrow-up {
+  color: #1e8449;
+}
+
+.rank-arrow-down {
+  color: #c0392b;
+}
+
+@media (max-width: 640px) {
+  .leaderboard-view-toggle {
+    grid-template-columns: 1fr;
+  }
+}
