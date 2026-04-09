@@ -291,6 +291,7 @@ export default function AdminPage() {
   const [importText, setImportText] = useState('');
   const [scoreImportText, setScoreImportText] = useState('');
   const [importingScores, setImportingScores] = useState(false);
+  const [updatingLiveScores, setUpdatingLiveScores] = useState(false);
   const [resettingTournament, setResettingTournament] = useState(false);
   const [status, setStatus] = useState<LobbyStatus | null>(null);
   const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
@@ -800,6 +801,28 @@ export default function AdminPage() {
     }
   }
 
+  async function onUpdateLiveScores() {
+    setUpdatingLiveScores(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/admin/update-live-scores', {
+        method: 'POST',
+      });
+      const data = (await response.json()) as { success?: boolean; message?: string; error?: string };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to update live scores.');
+      }
+
+      setSuccess(data.message ?? 'Live scores updated successfully.');
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Failed to update live scores.');
+    } finally {
+      setUpdatingLiveScores(false);
+    }
+  }
+
   async function onResetTournament() {
     setError(null);
     setSuccess(null);
@@ -1188,6 +1211,14 @@ export default function AdminPage() {
                   disabled={importingScores}
                 >
                   {importingScores ? 'Importing…' : 'Import Scores'}
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={onUpdateLiveScores}
+                  disabled={updatingLiveScores}
+                >
+                  {updatingLiveScores ? 'Updating…' : 'Update Live Scores'}
                 </button>
               </div>
             </div>
