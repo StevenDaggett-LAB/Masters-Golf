@@ -1212,7 +1212,7 @@ export default function AdminPage() {
                   onClick={onImportScores}
                   disabled={importingScores}
                 >
-                  {importingScores ? 'Importing…' : 'Import Scores'}
+                  {importingScores ? 'Importing...' : 'Import Scores'}
                 </button>
                 <button
                   type="button"
@@ -1220,11 +1220,7 @@ export default function AdminPage() {
                   onClick={onUpdateLiveScores}
                   disabled={updatingLiveScores}
                 >
-                  {updatingLiveScores ? 'Updating…' : 'Update Live Scores'}
-                 onClick={onUpdateLiveScores}
-                 disabled={importingScores}
-                >
-                  {importingScores ? 'Updating…' : 'Update Live Scores'}
+                  {updatingLiveScores ? 'Updating...' : 'Fetch Live Scores'}
                 </button>
               </div>
             </div>
