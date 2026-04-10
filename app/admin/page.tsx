@@ -803,6 +803,7 @@ export default function AdminPage() {
 
   async function onUpdateLiveScores() {
     setUpdatingLiveScores(true);
+    setImportingScores(true);
     setError(null);
     setSuccess(null);
 
@@ -820,9 +821,10 @@ export default function AdminPage() {
       setError(updateError instanceof Error ? updateError.message : 'Failed to update live scores.');
     } finally {
       setUpdatingLiveScores(false);
+      setImportingScores(false);
+
     }
   }
-
   async function onResetTournament() {
     setError(null);
     setSuccess(null);
@@ -1219,6 +1221,10 @@ export default function AdminPage() {
                   disabled={updatingLiveScores}
                 >
                   {updatingLiveScores ? 'Updating…' : 'Update Live Scores'}
+                 onClick={onUpdateLiveScores}
+                 disabled={importingScores}
+                >
+                  {importingScores ? 'Updating…' : 'Update Live Scores'}
                 </button>
               </div>
             </div>
