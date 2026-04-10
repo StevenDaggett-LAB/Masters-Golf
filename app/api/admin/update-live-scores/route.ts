@@ -9,22 +9,24 @@ function isAdmin(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const tournamentId = 688;
 
-  try {
-    const res = await fetch(
-      `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${process.env.SPORTSDATA_API_KEY}`
-    );
-
-    const data = await res.json();
-
-    return Response.json({ success: true, data });
-  } catch (error) {
-    console.error('Live score update failed:', error);
-    return Response.json(
-      { success: false, error: 'Failed to fetch scores' },
-      { status: 500 }
-    );
+  if (!isAdmin(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-}
+
+  try {
+    const apiKey = process.env.SPORTSDATA_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('SPORTSDATA_API_KEY is not configured.');
+    }
+
+    const response = await fetch(
+      `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${apiKey}`,
+      {
+        cache: 'no-store',
+      },
+    );
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -35,15 +37,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      'SportsDataIO response sample:',
-      Array.isArray(data) ? data.slice(0, 2) : data,
-    );
-
     return NextResponse.json({
       success: true,
       count: Array.isArray(data) ? data.length : 0,
       message: 'Live scores fetched successfully.',
+      data,
     });
   } catch (error) {
     return NextResponse.json(
