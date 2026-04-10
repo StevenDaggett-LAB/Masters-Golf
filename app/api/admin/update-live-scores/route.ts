@@ -7,27 +7,24 @@ function isAdmin(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAdmin(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const tournamentId = 688;
 
   try {
-    const apiKey = process.env.SPORTSDATA_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('SPORTSDATA_API_KEY is not configured.');
-    }
-
-    const response = await fetch(
-      'https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/688',
-      {
-        headers: {
-          'Ocp-Apim-Subscription-Key': apiKey,
-        },
-        cache: 'no-store',
-      },
+    const res = await fetch(
+      `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${process.env.SPORTSDATA_API_KEY}`
     );
 
+    const data = await res.json();
+
+    return Response.json({ success: true, data });
+  } catch (error) {
+    console.error('Live score update failed:', error);
+    return Response.json(
+      { success: false, error: 'Failed to fetch scores' },
+      { status: 500 }
+    );
+  }
+}
     const data = await response.json();
 
     if (!response.ok) {
