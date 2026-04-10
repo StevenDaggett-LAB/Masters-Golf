@@ -69,40 +69,45 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    if (!response.ok) {
+      throw new Error('Failed to fetch live scores.');
+    }
+
     const data = await response.json();
 
-    const mapped = data.map((player: any) => {
-      const rounds = player.PlayerRoundScore || [];
 
-      const getRoundScore = (roundNumber: number) => {
-        const round = rounds.find((r: any) => r.Number === roundNumber);
-        return round?.Score ?? null;
-     };
+const mapped = data.map((player: Record<string, unknown>) => {
+  const rounds = Array.isArray(player.PlayerRoundScore)
+    ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
+    : [];
 
-  return {
-    golfer_name: `${player.FirstName} ${player.LastName}`.trim(),
-    total_score: player.TotalScore ?? 0,
-    made_cut: true, // we can refine this later if needed
+  const getRoundScore = (roundNumber: number) => {
+    const round = rounds.find(
+      (r: Record<string, unknown>) => Number(r.Number) === roundNumber
+    );
+    return typeof round?.Score === 'number' ? round.Score : toIntOrNull(round?.Score);
+  };
+
+return {
+    golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
+    total_score: toIntOrNull(player.TotalScore) ?? 0,
+    made_cut: true,
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
     round_3_score: getRoundScore(3),
     round_4_score: getRoundScore(4),
-    sunday_birdies: 0, // not available from this endpoint
-    status_text: player.Status ?? null,
-    current_round_score: null, // optional for now
+    sunday_birdies: 0,
+    status_text: String(player.Status ?? '').trim() || null,
+    current_round_score: null,
   };
 });
-
     const normalized = mapped
        .map((r: Record<string, unknown>) => normalizeRecord(r))
-       .filter((r): r is GolferScoreRecord => r !== null);
+       .filter((r: GolferScoreRecord | null): r is GolferScoreRecord => r !== null);
 
     await saveGolferScores(normalized);
 
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch live scores.');
-    }
 
     return NextResponse.json({
       success: true,
