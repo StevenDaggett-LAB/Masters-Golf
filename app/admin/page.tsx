@@ -803,7 +803,6 @@ export default function AdminPage() {
 
   async function onUpdateLiveScores() {
     setUpdatingLiveScores(true);
-    setImportingScores(true);
     setError(null);
     setSuccess(null);
 
@@ -821,7 +820,6 @@ export default function AdminPage() {
       setError(updateError instanceof Error ? updateError.message : 'Failed to update live scores.');
     } finally {
       setUpdatingLiveScores(false);
-      setImportingScores(false);
 
     }
   }
