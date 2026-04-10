@@ -24,17 +24,13 @@ export async function POST(request: NextRequest) {
       `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${apiKey}`,
       {
         cache: 'no-store',
-      },
+      }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        typeof data === 'object' && data && 'message' in data
-          ? String((data as { message?: string }).message)
-          : 'Failed to fetch live scores.',
-      );
+      throw new Error('Failed to fetch live scores.');
     }
 
     return NextResponse.json({
@@ -50,7 +46,7 @@ export async function POST(request: NextRequest) {
         error:
           error instanceof Error ? error.message : 'Failed to update live scores.',
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
