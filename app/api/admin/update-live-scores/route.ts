@@ -104,7 +104,7 @@ return {
   (getRoundScore(2) ?? 0) +
   (getRoundScore(3) ?? 0) +
   (getRoundScore(4) ?? 0),
-    made_cut: player.Status !== 'MC',
+    made_cut: false,
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
     round_3_score: getRoundScore(3),
