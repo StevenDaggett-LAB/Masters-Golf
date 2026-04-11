@@ -81,8 +81,8 @@ const mapped = data.map((player: Record<string, unknown>) => {
     ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
     : [];
 if (`${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim() === 'Min Woo Lee') {
-  console.log('MIN WOO RAW PLAYER', player);
-  console.log('MIN WOO RAW ROUNDS', rounds);
+  console.log('MIN WOO RAW PLAYER', JSON.stringify(player, null, 2));
+  console.log('MIN WOO RAW ROUNDS', JSON.stringify(rounds, null, 2));
 }
 const getRoundScore = (roundNumber: number) => {
   const round = rounds.find(
