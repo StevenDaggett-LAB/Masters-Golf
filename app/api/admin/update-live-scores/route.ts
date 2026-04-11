@@ -94,6 +94,7 @@ const getRoundScore = (roundNumber: number) => {
   const par = Number(round.Par);
 
   if (!Number.isFinite(score) || !Number.isFinite(par)) return null;
+  console.log('ROUND SCORE DEBUG', { roundNumber, score, par, result: score - par, });
 
   return score - par; // 🔥 convert to relative-to-par
 };
