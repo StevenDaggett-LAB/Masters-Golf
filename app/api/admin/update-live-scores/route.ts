@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await fetch(
-      `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${apiKey}`,
+      `https://api.sportsdata.io/golf/v2/json/Leaderboard/${tournamentId}?key=${apiKey}`,
       {
         cache: 'no-store',
       }
@@ -86,49 +86,69 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
+    const playerRows = Array.isArray(data?.PlayerTournament) 
+      ? data.PlayerTournament
+      : Array.isArray(data?.Players)
+        ? data.Players
+        : Array.isArray(data?.Leaderboard)
+          ? data.Leaderboard
+          : [];  
+    if (playerRows.length === 0) {
+      console.log('LEADERBOARD TOP LEVEL KEYS', Object.keys(data ?? {}));
+      throw new Error('Leaderboard endpoint returned no player rows.');
+    }      
 
-const mapped = data.map((player: Record<string, unknown>) => {
-  const rounds = Array.isArray(player.PlayerRoundScore)
-    ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
-    : [];
-const totalScoreFromApi = toIntOrNull(player.TotalScore);
-const totalStrokes = toIntOrNull(player.TotalStrokes);
-const completedParTotal = getCompletedRoundParTotal(rounds);
 
-const derivedTotalScore =
-  totalScoreFromApi ??
-  (totalStrokes !== null && completedParTotal > 0
-    ? totalStrokes - completedParTotal
-    : 0);
-if (`${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim() === 'Min Woo Lee') {
-  console.log('MIN WOO RAW PLAYER', JSON.stringify(player, null, 2));
-  console.log('MIN WOO RAW ROUNDS', JSON.stringify(rounds, null, 2));
-}
-const getRoundScore = (roundNumber: number) => {
-  const round = rounds.find(
-    (r: Record<string, unknown>) => Number(r.Number) === roundNumber
-  );
-  if (!round) return null;
+const mapped = playerRows.map((row: Record<string, unknown>) => {
+  const firstName = String(
+    row.FirstName ??
+      (typeof row.Player === 'object' && row.Player ? (row.Player as Record<string, unknown>).FirstName : '') ??
+      ''
+  ).trim();
 
-  const score = Number(round.Score);
-  const par = Number(round.Par);
+  const lastName = String(
+    row.LastName ??
+      (typeof row.Player === 'object' && row.Player ? (row.Player as Record<string, unknown>).LastName : '') ??
+      ''
+  ).trim();
 
-  if (Number.isFinite(score) || Number.isFinite(par) || par === 0) {
-    return null;
-  }
+  const golferName = `${firstName} ${lastName}`.trim();
 
-  return score - par;
-};
-return {
-    golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
-    total_score: derivedTotalScore ?? 0,
-    made_cut: String(player.Status ?? '').trim() !== 'MC' && totalScoreFromApi !== null,
-    round_1_score: getRoundScore(1),
-    round_2_score: getRoundScore(2),
-    round_3_score: getRoundScore(3),
-    round_4_score: getRoundScore(4),
+  const totalScore = toIntOrNull(row.TotalScore) ?? 0;
+
+  const madeCutValue = row.MadeCut;
+  const madeCut =
+    typeof madeCutValue === 'boolean'
+      ? madeCutValue
+      : typeof madeCutValue === 'number'
+      ? madeCutValue !== 0
+      : true;
+
+  const isWithdrawnValue = row.IsWithdrawn;
+  const isWithdrawn =
+    typeof isWithdrawnValue === 'boolean'
+      ? isWithdrawnValue
+      : typeof isWithdrawnValue === 'number'
+      ? isWithdrawnValue !== 0
+      : false;
+
+  const statusText =
+    isWithdrawn
+      ? 'WD'
+      : !madeCut
+      ? 'MC'
+      : String(row.Status ?? row.Position ?? '').trim() || null;
+
+  return {
+    golfer_name: golferName,
+    total_score: totalScore,
+    made_cut: madeCut,
+    round_1_score: null,
+    round_2_score: null,
+    round_3_score: null,
+    round_4_score: null,
     sunday_birdies: 0,
-    status_text: String(player.Status ?? '').trim() || null,
+    status_text: statusText,
     current_round_score: null,
   };
 });
