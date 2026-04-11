@@ -81,17 +81,27 @@ const mapped = data.map((player: Record<string, unknown>) => {
     ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
     : [];
 
-  const getRoundScore = (roundNumber: number) => {
-    const round = rounds.find(
-      (r: Record<string, unknown>) => Number(r.Number) === roundNumber
-    );
-    return typeof round?.Score === 'number' ? round.Score : toIntOrNull(round?.Score);
-  };
+const getRoundScore = (roundNumber: number) => {
+  const round = rounds.find(
+    (r: Record<string, unknown>) => Number(r.Number) === roundNumber
+  );
+  if (!round) return null;
 
+  const score = Number(round.Score);
+  const par = Number(round.Par);
+
+  if (!Number.isFinite(score) || !Number.isFinite(par)) return null;
+
+  return score - par; // 🔥 convert to relative-to-par
+};
 return {
     golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
-    total_score: toIntOrNull(player.TotalScore) ?? 0,
-    made_cut: true,
+    total_score:
+  (getRoundScore(1) ?? 0) +
+  (getRoundScore(2) ?? 0) +
+  (getRoundScore(3) ?? 0) +
+  (getRoundScore(4) ?? 0),
+    made_cut: player.Status !== 'MC',
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
     round_3_score: getRoundScore(3),
