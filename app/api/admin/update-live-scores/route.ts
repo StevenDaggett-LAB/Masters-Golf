@@ -47,18 +47,6 @@ function normalizeRecord(input: Record<string, unknown>): GolferScoreRecord | nu
   } satisfies GolferScoreRecord;
 }
 
-function getCompletedRoundParTotal(rounds: Array<Record<string, unknown>>): number {
-  return rounds.reduce((sum, round) => {
-    const par = Number(round.Par);
-    const score = Number(round.Score);
-
-    if (!Number.isFinite(par) || !Number.isFinite(score) || par === 0 || score === 0) {
-      return sum;
-    }
-
-    return sum + par;
-  }, 0);
-}
 export async function POST(request: NextRequest) {
   const tournamentId = 688;
 
