@@ -110,13 +110,6 @@ function computeRoundHighs(records: GolferScoreRecord[]) {
   return highs;
 }
 
-function calculateGolferRelativeScore(record: GolferScoreRecord) {
-  if (!Number.isFinite(record.totalScore)) {
-    return 0;
-  }
-
-  return record.totalScore;
-}
 
 function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
