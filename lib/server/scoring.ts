@@ -118,14 +118,21 @@ function calculateGolferRelativeScore(record: GolferScoreRecord) {
   return record.totalScore;
 }
 
-function calculateGolferEffectiveTotal(record: GolferScoreRecord, highs: Record<number, number>) {
-  const relativeScore = calculateGolferRelativeScore(record);
+function calculateGolferEffectiveTotal(
+  record: GolferScoreRecord,
+  highs: Record<number, number>
+) {
+  const r1 = record.round1Score ?? 0;
+  const r2 = record.round2Score ?? 0;
+  const r3 = record.round3Score ?? 0;
+  const r4 = record.round4Score ?? 0;
 
   if (record.madeCut) {
-    return relativeScore;
+    return r1 + r2 + r3 + r4;
   }
 
-  return relativeScore + highs[3] + highs[4];
+  // Missed cut → replace rounds 3 & 4
+  return r1 + r2 + highs[3] + highs[4];
 }
 
 function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
@@ -220,7 +227,6 @@ export async function loadGolferScores(): Promise<GolferScoreRecord[]> {
     currentRoundScore: toIntOrNull(row.current_round_score),
   }));
 }
-
 export async function saveGolferScores(records: GolferScoreRecord[]) {
   if (!hasSupabaseConfig()) {
     for (const record of records) {
