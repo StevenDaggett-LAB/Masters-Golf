@@ -238,7 +238,17 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
     round_3_score: record.round3Score,
     round_4_score: record.round4Score,
     sunday_birdies: record.sundayBirdies,
-    status_text: record.statusText?.trim() || null,
+    
+    status_text:
+      record.statusText === 'MC' || record.madeCut === false
+        ? 'MC'
+        : record.statusText?.trim() || null,
+
+    total_score:
+      record.madeCut === false
+        ? record.totalScore || 999
+        : record.totalScore,
+            
     current_round_score: record.currentRoundScore ?? null,
     updated_at: new Date().toISOString(),
   }));
