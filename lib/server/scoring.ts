@@ -305,7 +305,10 @@ export async function getLeaderboardData() {
           sundayBirdies: 0,
         };
       }
-
+if (record.golferName === 'Min Woo Lee') {
+  console.log('MIN WOO RECORD', record);
+  console.log('ROUND HIGHS', highs);
+}
       const tournamentScore = calculateGolferEffectiveTotal(record, highs);
       return {
         golferName: record.golferName,
