@@ -83,46 +83,45 @@ function parseBoolean(value: unknown, fallback = true) {
 }
 
 function computeRoundHighs(records: GolferScoreRecord[]) {
-  const rounds: Array<keyof Pick<GolferScoreRecord, 'round1Score' | 'round2Score' | 'round3Score' | 'round4Score'>> = [
-    'round1Score',
-    'round2Score',
-    'round3Score',
-    'round4Score',
-  ];
-
   const highs: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
-  rounds.forEach((roundKey, idx) => {
-    const values = records
-      .map((record) => {
-        const roundScore = record[roundKey];
-        if (typeof roundScore !== 'number') {
-          return null;
-        }
-
-        return roundScore;
-      })
+  const getValues = (key: keyof Pick<GolferScoreRecord, 'round1Score' | 'round2Score' | 'round3Score' | 'round4Score'>) =>
+    records
+      .map((record) => record[key])
       .filter((value): value is number => typeof value === 'number');
 
-    highs[idx + 1] = values.length > 0 ? Math.max(...values) : 0;
-  });
+  highs[1] = Math.max(0, ...getValues('round1Score'));
+  highs[2] = Math.max(0, ...getValues('round2Score'));
+  highs[3] = Math.max(0, ...getValues('round3Score'));
+  highs[4] = Math.max(0, ...getValues('round4Score'));
 
   return highs;
 }
-
 
 function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
- if (record.madeCut) {
-    return record.totalScore;
-  }
-
+  if (record.madeCut) {
+  // fallback: some missed-cut players are still coming through with madeCut=true
   const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
   const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
 
+  const looksLikeMissedCut =
+    record.statusText === 'MC' ||
+    (record.totalScore === 0 && (r1 !== 0 || r2 !== 0));
+
+  if (!looksLikeMissedCut) {
+    return record.totalScore;
+  }
+
   return r1 + r2 + highs[3] + highs[4];
+}
+
+const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
+const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
+
+return r1 + r2 + highs[3] + highs[4];
 }
 function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
   if (a.teamTotalScore !== b.teamTotalScore) {
