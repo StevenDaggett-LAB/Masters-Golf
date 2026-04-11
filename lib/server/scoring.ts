@@ -115,17 +115,13 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
-  const r1 = record.round1Score ?? 0;
-  const r2 = record.round2Score ?? 0;
-  const r3 = record.round3Score ?? 0;
-  const r4 = record.round4Score ?? 0;
-
+  // Use API total (already relative to par) for players who made the cut
   if (record.madeCut) {
-    return r1 + r2 + r3 + r4;
+    return record.totalScore;
   }
 
-  // Missed cut → replace rounds 3 & 4
-  return r1 + r2 + highs[3] + highs[4];
+  // Missed cut: keep real score + add worst rounds
+  return record.totalScore + highs[3] + highs[4];
 }
 
 function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
