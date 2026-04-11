@@ -231,7 +231,6 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
 
   const upsertRows = records.map((record) => ({
     golfer_name: record.golferName.trim(),
-    total_score: record.totalScore,
     made_cut: record.madeCut,
     round_1_score: record.round1Score,
     round_2_score: record.round2Score,
@@ -248,7 +247,7 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
       record.madeCut === false
         ? record.totalScore || 999
         : record.totalScore,
-            
+
     current_round_score: record.currentRoundScore ?? null,
     updated_at: new Date().toISOString(),
   }));
