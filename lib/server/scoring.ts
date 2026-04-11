@@ -115,15 +115,25 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
-  // Use API total (already relative to par) for players who made the cut
+  const toRelative = (strokes: number | null) =>
+    typeof strokes === 'number' ? strokes - 72 : 0;
+
+  // If golfer made the cut → just use API total (already relative)
   if (record.madeCut) {
     return record.totalScore;
   }
 
-  // Missed cut: keep real score + add worst rounds
-  return record.totalScore + highs[3] + highs[4];
-}
+  // Build real score through 2 rounds
+  const baseThroughCut =
+    toRelative(record.round1Score) +
+    toRelative(record.round2Score);
 
+  // Only apply penalties if those rounds haven't been played
+  const round3Penalty = record.round3Score === null ? highs[3] : 0;
+  const round4Penalty = record.round4Score === null ? highs[4] : 0;
+
+  return baseThroughCut + round3Penalty + round4Penalty;
+}
 function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
   if (a.teamTotalScore !== b.teamTotalScore) {
     return a.teamTotalScore - b.teamTotalScore;
