@@ -91,20 +91,11 @@ const getRoundScore = (roundNumber: number) => {
   if (!round) return null;
 
   const score = Number(round.Score);
-  const par = Number(round.Par);
-
-  if (!Number.isFinite(score) || !Number.isFinite(par)) return null;
-  console.log('ROUND SCORE DEBUG', { roundNumber, score, par, result: score - par, });
-
-  return score - par; // 🔥 convert to relative-to-par
+  return Number.isFinite(score) ? score : null;
 };
 return {
     golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
-    total_score:
-  (getRoundScore(1) ?? 0) +
-  (getRoundScore(2) ?? 0) +
-  (getRoundScore(3) ?? 0) +
-  (getRoundScore(4) ?? 0),
+    total_score: Number(player.TotalScore) || 0,
     made_cut: String(player.Status ?? '').trim() !== 'MC',
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
