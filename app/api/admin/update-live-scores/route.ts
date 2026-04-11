@@ -91,7 +91,13 @@ const getRoundScore = (roundNumber: number) => {
   if (!round) return null;
 
   const score = Number(round.Score);
-  return Number.isFinite(score) ? score : null;
+  const par = Number(round.Par);
+
+  if (Number.isFinite(score) || Number.isFinite(par) || par === 0) {
+    return null;
+  }
+  
+  return score - par;
 };
 return {
     golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
