@@ -115,8 +115,8 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
-  const toRelative = (strokes: number | null) =>
-    typeof strokes === 'number' ? strokes - 72 : 0;
+  const toRelative = (score: number | null) =>
+    typeof score === 'number' ? score : 0;
 
   // If golfer made the cut → just use API total (already relative)
   if (record.madeCut) {
