@@ -51,6 +51,15 @@ function hasSupabaseConfig() {
   return Boolean(env.supabaseUrl && env.supabaseServiceRoleKey);
 }
 
+function normalizeGolferName(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/-/g, '')
+    .replace(/[.'’]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function normalizeName(name: string) {
   return name.trim().toLowerCase();
 }
