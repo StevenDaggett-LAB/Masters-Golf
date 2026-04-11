@@ -121,7 +121,7 @@ const getRoundScore = (roundNumber: number) => {
 };
 return {
     golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
-    total_score: derivedTotalScore,
+    total_score: derivedTotalScore ?? 0,
     made_cut: String(player.Status ?? '').trim() !== 'MC' && totalScoreFromApi !== null,
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
