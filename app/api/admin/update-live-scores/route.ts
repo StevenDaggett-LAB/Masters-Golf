@@ -47,7 +47,18 @@ function normalizeRecord(input: Record<string, unknown>): GolferScoreRecord | nu
   } satisfies GolferScoreRecord;
 }
 
+function getCompletedRoundParTotal(rounds: Array<Record<string, unknown>>): number {
+  return rounds.reduce((sum, round) => {
+    const par = Number(round.Par);
+    const score = Number(round.Score);
 
+    if (!Number.isFinite(par) || !Number.isFinite(score) || par === 0 || score === 0) {
+      return sum;
+    }
+
+    return sum + par;
+  }, 0);
+}
 export async function POST(request: NextRequest) {
   const tournamentId = 688;
 
@@ -80,6 +91,15 @@ const mapped = data.map((player: Record<string, unknown>) => {
   const rounds = Array.isArray(player.PlayerRoundScore)
     ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
     : [];
+const totalScoreFromApi = toIntOrNull(player.TotalScore);
+const totalStrokes = toIntOrNull(player.TotalStrokes);
+const completedParTotal = getCompletedRoundParTotal(rounds);
+
+const derivedTotalScore =
+  totalScoreFromApi ??
+  (totalStrokes !== null && completedParTotal > 0
+    ? totalStrokes - completedParTotal
+    : 0);
 if (`${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim() === 'Min Woo Lee') {
   console.log('MIN WOO RAW PLAYER', JSON.stringify(player, null, 2));
   console.log('MIN WOO RAW ROUNDS', JSON.stringify(rounds, null, 2));
@@ -96,13 +116,13 @@ const getRoundScore = (roundNumber: number) => {
   if (Number.isFinite(score) || Number.isFinite(par) || par === 0) {
     return null;
   }
-  
+
   return score - par;
 };
 return {
     golfer_name: `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim(),
-    total_score: Number(player.TotalScore) || 0,
-    made_cut: String(player.Status ?? '').trim() !== 'MC',
+    total_score: derivedTotalScore,
+    made_cut: String(player.Status ?? '').trim() !== 'MC' && totalScoreFromApi !== null,
     round_1_score: getRoundScore(1),
     round_2_score: getRoundScore(2),
     round_3_score: getRoundScore(3),
