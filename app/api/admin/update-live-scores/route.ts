@@ -109,21 +109,21 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
   const golferName = `${firstName} ${lastName}`.trim();
 
 
-  const plyerTournament =
+  const playerTournament =
     typeof row.PlayerTournament === 'object' && row.PlayerTournament
       ? (row.PlayerTournament as Record<string, unknown>)
       : row; 
 
   const totalScore =
     toIntOrNull(
-      plyerTournament.TotalScore ??
+      playerTournament.TotalScore ??
          playerTournament.Total ??
          row.TotalScore ??
          row.Total ??
          row.Score
     ) ?? 0;
 
-  const madeCutValue = plyerTournament.MadeCut ?? row.MadeCut;
+  const madeCutValue = playerTournament.MadeCut ?? row.MadeCut;
   const madeCut =
     typeof madeCutValue === 'boolean'
       ? madeCutValue
@@ -131,7 +131,7 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
       ? madeCutValue !== 0
       : true;
 
-  const isWithdrawnValue = plyerTournament.IsWithdrawn ?? row.IsWithdrawn;
+  const isWithdrawnValue = playerTournament.IsWithdrawn ?? row.IsWithdrawn;
   const isWithdrawn =
     typeof isWithdrawnValue === 'boolean'
       ? isWithdrawnValue
