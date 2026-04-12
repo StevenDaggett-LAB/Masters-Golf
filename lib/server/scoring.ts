@@ -103,18 +103,14 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
-  if (record.madeCut) {
-  // fallback: some missed-cut players are still coming through with madeCut=true
-  const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
-  const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
-
-  const looksLikeMissedCut =
-    record.statusText === 'MC' ||
-    (record.totalScore === 0 && (r1 !== 0 || r2 !== 0));
-
-  if (!looksLikeMissedCut) {
-    return record.totalScore;
+  // If golfer missed the cut → use stored 2-day score
+  if (record.madeCut === false || record.statusText === 'MC') {
+    return record.totalScore ?? 0;
   }
+
+  // Otherwise normal scoring
+  return record.totalScore ?? 0;
+}
 
   return r1 + r2 + highs[3] + highs[4];
 }
