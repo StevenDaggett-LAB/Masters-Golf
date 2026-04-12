@@ -195,12 +195,6 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
       ? isWithdrawnValue !== 0
       : false;
 
-  const rawStatusText =
-  isWithdrawn
-    ? 'WD'
-    : !madeCut
-    ? 'MC'
-    : String(row.Status ?? row.Position ?? '').trim() || null;
 
   const currentRoundScore =
   toIntOrNull(
