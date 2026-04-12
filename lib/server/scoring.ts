@@ -103,23 +103,17 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
-  // If golfer missed the cut → use stored 2-day score
   if (record.madeCut === false || record.statusText === 'MC') {
     return record.totalScore ?? 0;
   }
 
-  // Otherwise normal scoring
-  return record.totalScore ?? 0;
-}
+  const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
+  const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
 
   return r1 + r2 + highs[3] + highs[4];
 }
 
-const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
-const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
 
-return r1 + r2 + highs[3] + highs[4];
-}
 function compareScoredTeams(a: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>, b: Pick<ScoredTeam, 'teamTotalScore' | 'sundayBirdies' | 'teamName'>) {
   if (a.teamTotalScore !== b.teamTotalScore) {
     return a.teamTotalScore - b.teamTotalScore;
