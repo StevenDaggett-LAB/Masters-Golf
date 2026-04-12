@@ -82,12 +82,15 @@ export async function POST(request: NextRequest) {
           ? data.Leaderboard
           : []; 
           
-    console.log('LEADERBOARD SAMPLE ROW', JSON.stringify(playerRows[0], null, 2));  
+    console.log(
+      'LEADERBOARD SAMPLE ROW',
+      playerRows.length > 0 ? JSON.stringify(playerRows[0], null, 2) : 'NO ROWS'
+      );  
     if (playerRows.length === 0) {
       console.log('LEADERBOARD TOP LEVEL KEYS', Object.keys(data ?? {}));
       throw new Error('Leaderboard endpoint returned no player rows.');
     }     
-     
+
 
 
 const mapped = playerRows.map((row: Record<string, unknown>) => {
@@ -105,7 +108,6 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
 
   const golferName = `${firstName} ${lastName}`.trim();
 
-  const totalScore = toIntOrNull(row.TotalScore) ?? 0;
 
   const plyerTournament =
     typeof row.PlayerTournament === 'object' && row.PlayerTournament
