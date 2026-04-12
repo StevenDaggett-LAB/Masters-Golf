@@ -18,6 +18,24 @@ function toIntOrNull(value: unknown): number | null {
   return null;
 }
 
+function toRelativeIntOrNull(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toUpperCase();
+    if (!normalized) return null;
+
+    if (normalized === 'E') return 0; // 👈 THIS is the key fix
+
+    const parsed = Number(normalized.replace('+', ''));
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+  }
+
+  return null;
+}
+
 function parseBoolean(value: unknown, fallback = true): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -34,7 +52,7 @@ function normalizeRecord(input: Record<string, unknown>): GolferScoreRecord | nu
 
   return {
     golferName,
-    totalScore: toIntOrNull(input.total_score ?? input.totalScore) ?? 0,
+    totalScore: toRelativeIntOrNull(input.total_score ?? input.totalScore) ?? 0,
     madeCut: parseBoolean(input.made_cut ?? input.madeCut, true),
     round1Score: toIntOrNull(input.round_1_score ?? input.round1Score) ?? null,
     round2Score: toIntOrNull(input.round_2_score ?? input.round2Score) ?? null,
@@ -43,7 +61,7 @@ function normalizeRecord(input: Record<string, unknown>): GolferScoreRecord | nu
     sundayBirdies: toIntOrNull(input.sunday_birdies ?? input.sundayBirdies) ?? 0,
     statusText: String(input.status_text ?? input.statusText ?? '').trim() || null,
     currentRoundScore:
-      toIntOrNull(input.current_round_score ?? input.currentRoundScore) ?? null,
+      toRelativeIntOrNull(input.current_round_score ?? input.currentRoundScore) ?? null,
   } satisfies GolferScoreRecord;
 }
 
