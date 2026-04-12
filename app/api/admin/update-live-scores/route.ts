@@ -87,14 +87,14 @@ if (!roundResponse.ok) {
 
 const roundData = await roundResponse.json();
 
-    const playerRows = Array.isArray(data?.PlayerTournament) 
-      ? data.PlayerTournament
-      : Array.isArray(data?.Players)
-        ? data.Players
-        : Array.isArray(data?.Leaderboard)
-          ? data.Leaderboard
-          : []; 
-          
+const playerRows = Array.isArray(data?.Leaderboard)
+  ? data.Leaderboard
+  : Array.isArray(data?.PlayerTournament)
+  ? data.PlayerTournament
+  : Array.isArray(data?.Players)
+  ? data.Players
+  : [];
+
     console.log(
       'LEADERBOARD SAMPLE ROW',
       playerRows.length > 0 ? JSON.stringify(playerRows[0], null, 2) : 'NO ROWS'
@@ -116,6 +116,7 @@ function normalizeName(name: string) {
 const roundsByName = new Map(
   (Array.isArray(roundData) ? roundData : []).map((player: Record<string, unknown>) => {
     const golferName = `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim();
+
 
     const rounds = Array.isArray(player.PlayerRoundScore)
       ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
@@ -194,25 +195,49 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
       ? isWithdrawnValue !== 0
       : false;
 
-  const statusText =
-    isWithdrawn
-      ? 'WD'
-      : !madeCut
-      ? 'MC'
-      : String(row.Status ?? row.Position ?? '').trim() || null;
+  const rawStatusText =
+  isWithdrawn
+    ? 'WD'
+    : !madeCut
+    ? 'MC'
+    : String(row.Status ?? row.Position ?? '').trim() || null;
 
-  return {
-    golfer_name: golferName,
-    total_score: totalScore,
-    made_cut: madeCut,
-    round_1_score: roundRecord?.round1Score ?? null,
-    round_2_score: roundRecord?.round2Score ?? null,
-    round_3_score: roundRecord?.round3Score ?? null,
-    round_4_score: roundRecord?.round4Score ?? null,
-    sunday_birdies: 0,
-    status_text: statusText,
-    current_round_score: null,
-  };
+  const currentRoundScore =
+  toIntOrNull(
+    row.CurrentRoundScore ??
+      row.CurrentRoundToPar ??
+      row.Today ??
+      row.CurrentRoundRelativeToPar
+  );
+
+const thruText =
+  String(
+    row.Thru ??
+      row.CurrentHole ??
+      row.Hole ??
+      row.HoleNumber ??
+      ''
+  ).trim() || null;
+
+const displayStatusText =
+  isWithdrawn
+    ? 'WD'
+    : !madeCut
+    ? 'MC'
+    : thruText;
+
+return {
+  golfer_name: golferName,
+  total_score: totalScore,
+  made_cut: madeCut,
+  round_1_score: roundRecord?.round1Score ?? null,
+  round_2_score: roundRecord?.round2Score ?? null,
+  round_3_score: roundRecord?.round3Score ?? null,
+  round_4_score: roundRecord?.round4Score ?? null,
+  sunday_birdies: 0,
+  status_text: displayStatusText,
+  current_round_score: currentRoundScore,
+};
 });
     const normalized = mapped
        .map((r: Record<string, unknown>) => normalizeRecord(r))

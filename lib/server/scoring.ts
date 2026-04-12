@@ -31,6 +31,8 @@ export type LeaderboardEntry = {
   sundayBirdies: number;
   rankingPosition: number;
   tiebreakerApplied: boolean;
+  teamTodayScore?: number | null;
+  teamThruSummary?: string | null;
 };
 
 type TeamRow = {
@@ -44,6 +46,8 @@ type ScoredTeam = TeamRow & {
   selectedGolfers: LeaderboardGolferBreakdown[];
   teamTotalScore: number;
   sundayBirdies: number;
+  teamTodayScore?: number | null;
+  teamThruSummary?: string | null;
 };
 
 const inMemoryScores = new Map<string, GolferScoreRecord>();
@@ -231,10 +235,7 @@ export async function saveGolferScores(records: GolferScoreRecord[]) {
         ? 'MC'
         : record.statusText?.trim() || null,
 
-    total_score:
-      record.madeCut === false
-        ? record.totalScore || 999
-        : record.totalScore,
+    total_score: record.totalScore,
 
     current_round_score: record.currentRoundScore ?? null,
     updated_at: new Date().toISOString(),
@@ -307,17 +308,36 @@ if (record.golferName === 'Min Woo Lee') {
       };
     });
 
-    return {
-      ...team,
-      selectedGolfers: totals.map(({ golferName, tournamentScore, statusText, currentRoundScore }) => ({
-        golferName,
-        tournamentScore,
-        statusText,
-        currentRoundScore,
-      })),
-      teamTotalScore: totals.reduce((sum, item) => sum + item.total, 0),
-      sundayBirdies: totals.reduce((sum, item) => sum + item.sundayBirdies, 0),
-    };
+    const activeGolfers = totals.filter(
+  (item) => item.statusText !== 'MC' && item.statusText !== 'WD'
+);
+
+const teamTodayScore =
+  activeGolfers.length > 0
+    ? activeGolfers.reduce((sum, item) => sum + (item.currentRoundScore ?? 0), 0)
+    : null;
+
+const teamThruSummary =
+  activeGolfers.length > 0
+    ? activeGolfers
+        .map((item) => item.statusText)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .join(', ')
+    : null;
+
+return {
+  ...team,
+  selectedGolfers: totals.map(({ golferName, tournamentScore, statusText, currentRoundScore }) => ({
+    golferName,
+    tournamentScore,
+    statusText,
+    currentRoundScore,
+  })),
+  teamTotalScore: totals.reduce((sum, item) => sum + item.total, 0),
+  sundayBirdies: totals.reduce((sum, item) => sum + item.sundayBirdies, 0),
+  teamTodayScore,
+  teamThruSummary,
+};
   });
 
   scored.sort(compareScoredTeams);
@@ -336,11 +356,14 @@ if (record.golferName === 'Min Woo Lee') {
     sundayBirdies: row.sundayBirdies,
     rankingPosition: index + 1,
     tiebreakerApplied: (scoreGroupCounts.get(row.teamTotalScore) ?? 0) > 1,
+    teamTodayScore: row.teamTodayScore,
+    teamThruSummary: row.teamThruSummary,
   }));
 
   return {
     isVisible: true,
     hardLockTimeUtc: status.hardLockTimeUtc,
     entries,
+
   };
 }
