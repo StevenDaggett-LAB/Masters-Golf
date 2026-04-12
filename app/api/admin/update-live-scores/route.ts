@@ -80,11 +80,14 @@ export async function POST(request: NextRequest) {
         ? data.Players
         : Array.isArray(data?.Leaderboard)
           ? data.Leaderboard
-          : [];  
+          : []; 
+          
+    console.log('LEADERBOARD SAMPLE ROW', JSON.stringify(playerRows[0], null, 2));  
     if (playerRows.length === 0) {
       console.log('LEADERBOARD TOP LEVEL KEYS', Object.keys(data ?? {}));
       throw new Error('Leaderboard endpoint returned no player rows.');
-    }      
+    }     
+     
 
 
 const mapped = playerRows.map((row: Record<string, unknown>) => {
@@ -104,7 +107,21 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
 
   const totalScore = toIntOrNull(row.TotalScore) ?? 0;
 
-  const madeCutValue = row.MadeCut;
+  const plyerTournament =
+    typeof row.PlayerTournament === 'object' && row.PlayerTournament
+      ? (row.PlayerTournament as Record<string, unknown>)
+      : row; 
+
+  const totalScore =
+    toIntOrNull(
+      plyerTournament.TotalScore ??
+         playerTournament.Total ??
+         row.TotalScore ??
+         row.Total ??
+         row.Score
+    ) ?? 0;
+
+  const madeCutValue = plyerTournament.MadeCut ?? row.MadeCut;
   const madeCut =
     typeof madeCutValue === 'boolean'
       ? madeCutValue
@@ -112,7 +129,7 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
       ? madeCutValue !== 0
       : true;
 
-  const isWithdrawnValue = row.IsWithdrawn;
+  const isWithdrawnValue = plyerTournament.IsWithdrawn ?? row.IsWithdrawn;
   const isWithdrawn =
     typeof isWithdrawnValue === 'boolean'
       ? isWithdrawnValue

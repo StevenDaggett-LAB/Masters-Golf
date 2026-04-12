@@ -103,14 +103,12 @@ function calculateGolferEffectiveTotal(
   record: GolferScoreRecord,
   highs: Record<number, number>
 ) {
+  const base = record.totalScore ?? 0;
+
   if (record.madeCut === false || record.statusText === 'MC') {
-    return record.totalScore ?? 0;
+    return base + highs[3] + highs[4];
   }
-
-  const r1 = typeof record.round1Score === 'number' ? record.round1Score : 0;
-  const r2 = typeof record.round2Score === 'number' ? record.round2Score : 0;
-
-  return r1 + r2 + highs[3] + highs[4];
+  return base;
 }
 
 
