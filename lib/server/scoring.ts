@@ -110,7 +110,9 @@ function calculateGolferEffectiveTotal(
   const base = record.totalScore ?? 0;
 
   if (record.madeCut === false || record.statusText === 'MC') {
-    return base + highs[3] + highs[4];
+    const round3Penalty = highs[3] > 0 ? highs[3] : 0;
+    const round4Penalty = highs[4] > 0 ? highs[4] : 0;
+    return base + round3Penalty + round4Penalty;
   }
   return base;
 }
@@ -271,6 +273,8 @@ export async function getLeaderboardData() {
   const scoreMap = new Map(scores.map((record) => [normalizeName(record.golferName), record]));
   const highs = computeRoundHighs(scores);
 
+  console.log('ROUND HIGHS DEBUG', highs);
+
   const scored: ScoredTeam[] = teams.map((team) => {
     const golferNames = [
       team.picks.tier1,
@@ -312,9 +316,13 @@ if (record.golferName === 'Min Woo Lee') {
   (item) => item.statusText !== 'MC' && item.statusText !== 'WD'
 );
 
+const activeTodayScores = activeGolfers
+  .map((item) => item.currentRoundScore)
+  .filter((value): value is number => typeof value === 'number');
+
 const teamTodayScore =
-  activeGolfers.length > 0
-    ? activeGolfers.reduce((sum, item) => sum + (item.currentRoundScore ?? 0), 0)
+  activeTodayScores.length > 0
+    ? activeTodayScores.reduce((sum, value) => sum + value, 0)
     : null;
 
 const teamThruSummary =

@@ -171,12 +171,12 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
       : row; 
 
   const totalScore =
-    toIntOrNull(
-      playerTournament.TotalScore ??
-         playerTournament.Total ??
-         row.TotalScore ??
-         row.Total ??
-         row.Score
+    toRelativeIntOrNull(
+      row.TotalScore ??
+        row.Total ??
+        row.Score ??
+        playerTournament.TotalScore ??
+        playerTournament.Total
     ) ?? 0;
 
   const madeCutValue = playerTournament.MadeCut ?? row.MadeCut;
@@ -197,16 +197,29 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
 
 
   const currentRoundScore =
-  toIntOrNull(
-    row.CurrentRoundScore ??
-      row.CurrentRoundToPar ??
+    toRelativeIntOrNull(
       row.Today ??
-      row.CurrentRoundRelativeToPar
+        row.CurrentRoundScore ??
+        row.CurrentRountToPar ??
+        row.CurrentRoundRelativeToPar
   );
+  function toRelativeIntOrNull(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Math.trunc(value);
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toUpperCase();
+      if (normalized === 'E') return 0;
 
+      const parsed = Number(normalized.replace('+', ''));
+      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+    }
+    return null;
+  }
 const thruText =
   String(
     row.Thru ??
+      row.DisplayPosition ??
       row.CurrentHole ??
       row.Hole ??
       row.HoleNumber ??
