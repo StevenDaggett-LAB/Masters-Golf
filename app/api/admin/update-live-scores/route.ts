@@ -74,6 +74,19 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
+    const roundResponse = await fetch(
+  `https://api.sportsdata.io/golf/v2/json/PlayerTournamentRoundScores/${tournamentId}?key=${apiKey}`,
+  {
+    cache: 'no-store',
+  }
+);
+
+if (!roundResponse.ok) {
+  throw new Error('Failed to fetch round scores.');
+}
+
+const roundData = await roundResponse.json();
+
     const playerRows = Array.isArray(data?.PlayerTournament) 
       ? data.PlayerTournament
       : Array.isArray(data?.Players)
@@ -89,9 +102,50 @@ export async function POST(request: NextRequest) {
     if (playerRows.length === 0) {
       console.log('LEADERBOARD TOP LEVEL KEYS', Object.keys(data ?? {}));
       throw new Error('Leaderboard endpoint returned no player rows.');
-    }     
+    }  
 
+function normalizeName(name: string) {
+  return String(name ?? '')
+    .toLowerCase()
+    .replace(/-/g, '')
+    .replace(/[.'’]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
+const roundsByName = new Map(
+  (Array.isArray(roundData) ? roundData : []).map((player: Record<string, unknown>) => {
+    const golferName = `${String(player.FirstName ?? '')} ${String(player.LastName ?? '')}`.trim();
+
+    const rounds = Array.isArray(player.PlayerRoundScore)
+      ? (player.PlayerRoundScore as Array<Record<string, unknown>>)
+      : [];
+
+    const getRoundScore = (roundNumber: number) => {
+      const round = rounds.find((r) => Number(r.Number) === roundNumber);
+      if (!round) return null;
+
+      const score = Number(round.Score);
+      const par = Number(round.Par);
+
+      if (!Number.isFinite(score) || !Number.isFinite(par) || par === 0) {
+        return null;
+      }
+
+      return score - par;
+    };
+
+    return [
+      normalizeName(golferName),
+      {
+        round1Score: getRoundScore(1),
+        round2Score: getRoundScore(2),
+        round3Score: getRoundScore(3),
+        round4Score: getRoundScore(4),
+      },
+    ];
+  })
+);
 
 const mapped = playerRows.map((row: Record<string, unknown>) => {
   const firstName = String(
@@ -108,6 +162,7 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
 
   const golferName = `${firstName} ${lastName}`.trim();
 
+  const roundRecord = roundsByName.get(normalizeName(golferName));
 
   const playerTournament =
     typeof row.PlayerTournament === 'object' && row.PlayerTournament
@@ -150,10 +205,10 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
     golfer_name: golferName,
     total_score: totalScore,
     made_cut: madeCut,
-    round_1_score: null,
-    round_2_score: null,
-    round_3_score: null,
-    round_4_score: null,
+    round_1_score: roundRecord?.round1Score ?? null,
+    round_2_score: roundRecord?.round2Score ?? null,
+    round_3_score: roundRecord?.round3Score ?? null,
+    round_4_score: roundRecord?.round4Score ?? null,
     sunday_birdies: 0,
     status_text: statusText,
     current_round_score: null,
