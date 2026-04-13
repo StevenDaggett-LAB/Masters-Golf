@@ -104,17 +104,10 @@ function computeRoundHighs(records: GolferScoreRecord[]) {
 }
 
 function calculateGolferEffectiveTotal(
-  record: GolferScoreRecord,
-  highs: Record<number, number>
+  record: GolferScoreRecord
+  , highs: Record<number, number>
 ) {
-  const base = record.totalScore ?? 0;
-
-  if (record.madeCut === false || record.statusText === 'MC') {
-    const round3Penalty = highs[3] > 0 ? highs[3] : 0;
-    const round4Penalty = highs[4] > 0 ? highs[4] : 0;
-    return base + round3Penalty + round4Penalty;
-  }
-  return base;
+    return record.totalScore ?? 0;
 }
 
 

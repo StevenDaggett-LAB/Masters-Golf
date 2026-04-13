@@ -190,12 +190,22 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
 
   const totalScore =
     toRelativeIntOrNull(
-      row.TotalScore ??
-        row.Total ??
+      row.Total ??
+        row.TotalScore ??
         row.Score ??
-        playerTournament.TotalScore ??
-        playerTournament.Total
+        playerTournament.Total ??
+        playerTournament.TotalScore
     ) ?? 0;
+console.log('LIVE TOTAL DEBUG', {
+    golferName,
+    rowTotal: row.Total,
+    rowTotalScore: row.TotalScore,
+    rowScore: row.Score,
+    nestedTotal: playerTournament.Total,
+    nestedTotalScore: playerTournament.TotalScore,
+    chosenTotal: totalScore,
+  });
+})
 
   const madeCutValue = playerTournament.MadeCut ?? row.MadeCut;
   const madeCut =
@@ -221,6 +231,36 @@ const mapped = playerRows.map((row: Record<string, unknown>) => {
         row.CurrentRountToPar ??
         row.CurrentRoundRelativeToPar
   );
+  const thruText =
+    String(
+      row.Thru ??
+        row.DisplayPosition ??
+        row.CurrentHole ??
+        row.Hole ??
+        row.HoleNumber ??
+        ''
+    ).trim() || null;
+    
+  const displayStatusText =
+    isWithdrawn
+      ? 'WD'
+      : !madeCut
+      ? 'MC'
+      : thruText;
+
+  return {
+    golfer_name: golferName,
+    total_score: totalScore,
+    made_cut: madeCut,
+    round_1_score: roundRecord?.round1Score ?? null,
+    round_2_score: roundRecord?.round2Score ?? null,
+    round_3_score: roundRecord?.round3Score ?? null,
+    round_4_score: roundRecord?.round4Score ?? null,
+    sunday_birdies: 0,
+    status_text: displayStatusText,
+    current_round_score: currentRoundScore,
+  };
+});
   function toRelativeIntOrNull(value: unknown): number | null {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return Math.trunc(value);
